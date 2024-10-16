@@ -185,6 +185,55 @@ class CheckersEnv(gym.Env):
         self.current_player *= -1
         
         return self.board, reward, self.done, {}
+
+    def is_valid_move(self, start_row, start_col, end_row, end_col):
+        # Basic bounds checking
+        if not (0 <= start_row < 8 and 0 <= start_col < 8 and 0 <= end_row < 8 and 0 <= end_col < 8):
+            return False
+        
+        # Check if the move is starting from the current player's piece
+        piece = self.board[start_row, start_col]
+        if piece == 0 or np.sign(piece) != self.current_player:
+            return False
+
+        # Check if the destination is empty
+        if self.board[end_row, end_col] != 0:
+            return False
+        
+        # Normal piece can only move diagonally by one row (or two if jumping)
+        row_diff = end_row - start_row
+        col_diff = abs(end_col - start_col)
+
+        # Check valid move distance for normal pieces
+        if piece == 1 or piece == -1:  # Normal pieces
+            if self.current_player == 1 and row_diff != -1 and row_diff != -2:
+                return False  # Player 1 moves up the board
+            if self.current_player == -1 and row_diff != 1 and row_diff != 2:
+                return False  # Player 2 moves down the board
+        else:  # Kings
+            if abs(row_diff) != 1 and abs(row_diff) != 2:
+                return False  # Kings can move both ways
+        
+        # Check for valid capture (jumping over an opponent's piece)
+        if abs(row_diff) == 2 and col_diff == 2:
+            mid_row = (start_row + end_row) // 2
+            mid_col = (start_col + end_col) // 2
+            mid_piece = self.board[mid_row, mid_col]
+            if np.sign(mid_piece) == self.current_player or mid_piece == 0:
+                return False  # Can't jump over own piece or empty space
+        
+        return True
+
+    def is_game_over(self):
+        # Check if either player has no pieces left
+        if not (1 in self.board or 2 in self.board):  # Player 1 lost
+            return True
+        if not (-1 in self.board or -2 in self.board):  # Player 2 lost
+            return True
+        
+        return False
+
+    
     
 
 
