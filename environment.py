@@ -139,6 +139,19 @@ class CheckersEnv(gym.Env):
         # Initialize the board
         self.reset()
 
+    def reset(self):
+        # Setup initial positions for the checkers pieces
+        self.board = np.zeros((8, 8), dtype=np.int8)
+        # Player 1's pieces
+        self.board[0:3:2, 1::2] = 1
+        self.board[1:3:2, 0::2] = 1
+        # Player 2's pieces
+        self.board[5:8:2, 0::2] = -1
+        self.board[6:8:2, 1::2] = -1
+        self.current_player = 1  # 1 for Player 1, -1 for Player 2
+        return self.board
+    
+
 
 """game = connect_four_env()
 game.reset()
