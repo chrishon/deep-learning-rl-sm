@@ -124,6 +124,21 @@ class connect_four_env(gym.Env):
     def display_board(self):
         print(self._curr_state)
 
+class CheckersEnv(gym.Env):
+    def __init__(self):
+        super(CheckersEnv, self).__init__()
+        # Define an 8x8 board space
+        self.observation_space = spaces.Box(low=-2, high=2, shape=(8, 8), dtype=np.int8)
+        
+        # Define the action space as a tuple (start_row, start_col, end_row, end_col)
+        self.action_space = spaces.Tuple((
+            spaces.Discrete(8), spaces.Discrete(8),  # start position
+            spaces.Discrete(8), spaces.Discrete(8)   # end position
+        ))
+        
+        # Initialize the board
+        self.reset()
+
 
 """game = connect_four_env()
 game.reset()
