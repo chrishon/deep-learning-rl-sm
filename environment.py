@@ -150,6 +150,41 @@ class CheckersEnv(gym.Env):
         self.board[6:8:2, 1::2] = -1
         self.current_player = 1  # 1 for Player 1, -1 for Player 2
         return self.board
+
+    def step(self, action):
+        start_row, start_col, end_row, end_col = action
+        # Validate the move and make sure it's the current player's turn
+        if not self.is_valid_move(start_row, start_col, end_row, end_col):
+            return self.board, -10, self.done, {}  # Invalid move penalty
+        
+        # Move the piece by moving the number to the end position, leaving the start positions as 0's
+        self.board[end_row, end_col] = self.board[start_row, start_col]
+        self.board[start_row, start_col] = 0
+        
+        # Check if the move is a capture (because of jumping we are moving 2 diagonally)
+        if abs(start_row - end_row) == 2 and abs(start_col - end_col) == 2:
+            # Remove the captured piece
+            captured_row = (start_row + end_row) // 2
+            captured_col = (start_col + end_col) // 2
+            self.board[captured_row, captured_col] = 0
+            
+            reward = 1  # Reward for capturing a piece
+        else:
+            reward = 0  # Normal move, no reward
+        
+        # Promote to king if the piece reaches the opposite side of the board
+        if end_row == 0 and self.board[end_row, end_col] == 1:
+            self.board[end_row, end_col] = 2  # Player 1 gets a king
+        elif end_row == 7 and self.board[end_row, end_col] == -1:
+            self.board[end_row, end_col] = -2  # Player 2 gets a king
+
+        # Check if the game is over
+        self.done = self.is_game_over()
+        
+        # Switch turns
+        self.current_player *= -1
+        
+        return self.board, reward, self.done, {}
     
 
 
