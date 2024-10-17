@@ -116,3 +116,12 @@ class CheckersEnv(gym.Env):
             return True
         
         return False
+
+    def test_king_promotion(self):
+        """Test that a piece is promoted to king when it reaches the opposite side."""
+        self.env.reset()
+        # Move a Player 1 piece to the last row
+        self.env.board[1, 0] = 0  # Clear space
+        action = (2, 1, 0, 0)  # Player 1 moves to last row
+        board, reward, done, _ = self.env.step(action)
+        self.assertEqual(board[0, 0], 2)  # The piece should now be a king (2)
