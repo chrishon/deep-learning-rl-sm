@@ -46,3 +46,12 @@ class TestCheckersEnv(unittest.TestCase):
         self.env.reset()
         action = (2, 1, 4, 3)  # Player 1 tries to jump over nothing
         self.assertFalse(self.env.is_valid_move(*action))
+
+    def test_normal_move(self):
+        """Test executing a valid normal move and updating the board."""
+        self.env.reset()
+        action = (2, 1, 3, 2)  # A normal move for Player 1
+        board, reward, done, _ = self.env.step(action)
+        self.assertEqual(board[3, 2], 1)  # The piece should now be at (3, 2)
+        self.assertEqual(board[2, 1], 0)  # The original spot should be empty
+        self.assertEqual(reward, 0)  # No reward for a normal move
