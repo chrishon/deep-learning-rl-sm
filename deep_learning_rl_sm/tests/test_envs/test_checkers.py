@@ -55,3 +55,14 @@ class TestCheckersEnv(unittest.TestCase):
         self.assertEqual(board[3, 2], 1)  # The piece should now be at (3, 2)
         self.assertEqual(board[2, 1], 0)  # The original spot should be empty
         self.assertEqual(reward, 0)  # No reward for a normal move
+
+    def test_capture_move_execution(self):
+        """Test executing a capture move and updating the board."""
+        self.env.reset()
+        # Set up a capture scenario
+        self.env.board[3, 2] = -1  # Opponent piece
+        action = (2, 1, 4, 3)  # Player 1 captures opponent
+        board, reward, done, _ = self.env.step(action)
+        self.assertEqual(board[4, 3], 1)  # Player 1 should be at (4, 3)
+        self.assertEqual(board[3, 2], 0)  # The opponent's piece should be removed
+        self.assertEqual(reward, 1)  # Reward for the capture
