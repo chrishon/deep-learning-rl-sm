@@ -32,3 +32,17 @@ class TestCheckersEnv(unittest.TestCase):
         self.env.reset()
         action = (2, 1, 1, 2)  # Player 1 tries to move onto another piece
         self.assertFalse(self.env.is_valid_move(*action))
+
+    def test_capture_move(self):
+        """Test that a valid capture (jumping over opponent) works."""
+        self.env.reset()
+        # Make a capture possible by Player 1
+        self.env.board[3, 2] = -1  # Opponent piece for Player 1 to jump over
+        action = (2, 1, 4, 3)  # Player 1 jumps over opponent
+        self.assertTrue(self.env.is_valid_move(*action))
+
+    def test_invalid_capture(self):
+        """Test that an invalid capture (jumping over an empty space) is rejected."""
+        self.env.reset()
+        action = (2, 1, 4, 3)  # Player 1 tries to jump over nothing
+        self.assertFalse(self.env.is_valid_move(*action))
