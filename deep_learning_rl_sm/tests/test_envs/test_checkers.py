@@ -20,3 +20,15 @@ class TestCheckersEnv(unittest.TestCase):
         expected_board[5:8:2, 0::2] = -1
         expected_board[6:8:2, 1::2] = -1
         np.testing.assert_array_equal(board, expected_board)
+    
+    def test_valid_move(self):
+        """Test that a normal valid move works correctly for Player 1."""
+        self.env.reset()
+        action = (2, 1, 3, 0)  # A normal move for Player 1
+        self.assertTrue(self.env.is_valid_move(*action))
+
+    def test_invalid_move(self):
+        """Test that an invalid move (moving to an occupied space) is correctly rejected."""
+        self.env.reset()
+        action = (2, 1, 1, 2)  # Player 1 tries to move onto another piece
+        self.assertFalse(self.env.is_valid_move(*action))
