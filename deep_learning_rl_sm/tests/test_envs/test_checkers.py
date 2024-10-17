@@ -66,3 +66,21 @@ class TestCheckersEnv(unittest.TestCase):
         self.assertEqual(board[4, 3], 1)  # Player 1 should be at (4, 3)
         self.assertEqual(board[3, 2], 0)  # The opponent's piece should be removed
         self.assertEqual(reward, 1)  # Reward for the capture
+    
+    def test_king_promotion(self):
+        """Test that a piece is promoted to king when it reaches the opposite side."""
+        self.env.reset()
+        # Move a Player 1 piece to the last row
+        self.env.board[6, 1] = 1  # Clear space
+        self.env.board[7, 2] = 0  # Clear space
+        action = (6, 1, 7, 2)  # Player 1 moves to last row
+        board, reward, done, _ = self.env.step(action)
+        self.assertEqual(board[7, 2], 2)  # The piece should now be a king (2)
+    
+    def test_game_over(self):
+        """Test that the game ends when one player has no pieces left."""
+        self.env.reset()
+        # Clear Player 2's pieces
+        self.env.board[5:8, :] = 0
+        self.env.board[6:8, :] = 0
+        self.assertTrue(self.env.is_game_over())
