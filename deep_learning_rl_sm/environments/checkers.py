@@ -28,6 +28,8 @@ class CheckersEnv(gym.Env):
         self.board[5:8:2, 0::2] = -1
         self.board[6:8:2, 1::2] = -1
         self.current_player = 1  # 1 for Player 1, -1 for Player 2
+
+        self.done = False
         return self.board
 
     def step(self, action):
@@ -52,10 +54,10 @@ class CheckersEnv(gym.Env):
             reward = 0  # Normal move, no reward
         
         # Promote to king if the piece reaches the opposite side of the board
-        if end_row == 0 and self.board[end_row, end_col] == 1:
-            self.board[end_row, end_col] = 2  # Player 1 gets a king
-        elif end_row == 7 and self.board[end_row, end_col] == -1:
+        if end_row == 0 and self.board[end_row, end_col] == -1:
             self.board[end_row, end_col] = -2  # Player 2 gets a king
+        elif end_row == 7 and self.board[end_row, end_col] == 1:
+            self.board[end_row, end_col] = 2  # Player 1 gets a king
 
         # Check if the game is over
         self.done = self.is_game_over()
@@ -117,11 +119,4 @@ class CheckersEnv(gym.Env):
         
         return False
 
-    def test_king_promotion(self):
-        """Test that a piece is promoted to king when it reaches the opposite side."""
-        self.env.reset()
-        # Move a Player 1 piece to the last row
-        self.env.board[1, 0] = 0  # Clear space
-        action = (2, 1, 0, 0)  # Player 1 moves to last row
-        board, reward, done, _ = self.env.step(action)
-        self.assertEqual(board[0, 0], 2)  # The piece should now be a king (2)
+    
