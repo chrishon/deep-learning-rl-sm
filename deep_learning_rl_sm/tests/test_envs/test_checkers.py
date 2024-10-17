@@ -84,3 +84,10 @@ class TestCheckersEnv(unittest.TestCase):
         self.env.board[5:8, :] = 0
         self.env.board[6:8, :] = 0
         self.assertTrue(self.env.is_game_over())
+    
+    def test_illegal_move_penalty(self):
+        """Test that an illegal move results in a penalty."""
+        self.env.reset()
+        action = (2, 1, 1, 2)  # Invalid move (Player 1 tries to move onto another piece)
+        board, reward, done, _ = self.env.step(action)
+        self.assertEqual(reward, -10)  # Reward should be -10 for illegal move
