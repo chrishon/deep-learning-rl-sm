@@ -1,7 +1,6 @@
-import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-
+from our_gym2 import OurEnv as gym
 
 class CheckersEnv(gym.Env):
     def __init__(self):
@@ -17,6 +16,7 @@ class CheckersEnv(gym.Env):
         
         # Initialize the board
         self.reset()
+        self.action_mask = self.generate_action_mask()
 
     def reset(self):
         # Setup initial positions for the checkers pieces
@@ -64,6 +64,7 @@ class CheckersEnv(gym.Env):
         
         # Switch turns
         self.current_player *= -1
+        self.action_mask = self._generate_action_mask()
         
         return self.board, reward, self.done, {}
 
@@ -109,6 +110,17 @@ class CheckersEnv(gym.Env):
                 return False  # Can't jump over own piece or empty space
         
         return True
+    
+    def _generate_action_mask(self):
+        # TODO: brute force implementation, can be made more efficient
+        action_mask = np.zeros((8, 8, 8, 8), dtype=np.int8)
+        for start_row in range(8):
+            for start_col in range(8):
+                for end_row in range(8):
+                    for end_col in range(8):
+                        if self.is_valid_move(start_row, start_col, end_row, end_col):
+                            action_mask[start_row, start_col, end_row, end_col] = 1
+        return action_mask
 
     def is_game_over(self):
         # Check if either player has no pieces left
