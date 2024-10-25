@@ -2,13 +2,15 @@ import gymnasium as gym
 import numpy as np
 from typing import Optional
 
+from deep_learning_rl_sm.environments.our_gym import Our_Env
+
 
 def _get_info():
     # don't think we need this
     return 0
 
 
-class connect_four_env(gym.Env):
+class connect_four_env(Our_Env):
 
     def __init__(self, width: int = 7, length: int = 6):
         # The size of the square grid
@@ -26,7 +28,7 @@ class connect_four_env(gym.Env):
                 "state": gym.spaces.MultiDiscrete(np.full((self.length, self.width), 3)),
             }
         )
-
+        self.action_mask = np.array([True for _ in range(7)], dtype=np.int8)
         self.no_actions = 7
         self.action_space = gym.spaces.Discrete(self.no_actions)
 
@@ -119,12 +121,16 @@ class connect_four_env(gym.Env):
         obs = self._get_obs()
         inf = _get_info()
 
+        # recalculate action mask
+        for idx, top_row_entry in enumerate(self._curr_state[0]):
+            if top_row_entry != 0:
+                self.action_mask[idx] = False
         return obs, rew, term, trunc, inf
 
     def display_board(self):
         print(self._curr_state)
- 
-    
+
+
 """game = connect_four_env()
 game.reset()
 game.step(0)
