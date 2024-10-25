@@ -2,7 +2,7 @@ import gymnasium as gym
 import numpy as np
 from typing import Optional
 
-from deep_learning_rl_sm.environments.our_gym import Our_Env
+from deep_learning_rl_sm.environments.our_gym import OurEnv
 
 
 def _get_info():
@@ -10,7 +10,7 @@ def _get_info():
     return 0
 
 
-class connect_four_env(Our_Env):
+class connect_four_env(OurEnv):
 
     def __init__(self, width: int = 7, length: int = 6):
         # The size of the square grid
