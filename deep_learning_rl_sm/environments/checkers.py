@@ -1,6 +1,6 @@
 from gymnasium import spaces
 import numpy as np
-from our_gym2 import OurEnv as gym
+from deep_learning_rl_sm.environments.our_gym import OurEnv as gym
 
 class CheckersEnv(gym.Env):
     def __init__(self):
