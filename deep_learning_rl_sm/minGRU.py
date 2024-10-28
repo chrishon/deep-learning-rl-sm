@@ -42,6 +42,8 @@ class minGRU(Module):
 
         # We use the log-space version of the algorithm for additional numerical stability
         # (i.e. long sequences more likely to result in numerical underflow)
+        # by e.g. converting to log-values, summing and then exponentiating we achieve the same result as
+        # multiplying the original values but with better numerical stability
 
     def forward(self, x, h0=None):
         k = self.f_z(x)
@@ -54,4 +56,4 @@ class minGRU(Module):
 
 
 # Test
-
+# TODO how do we only predict next action & reward like REINFORMER instead of action reward & state (full transition)
