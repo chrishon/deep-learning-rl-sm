@@ -34,6 +34,7 @@ class minGRU(Module):
         # change names, rearrange code etc. for the sake of it
 
         """
+        Note: This version is not in log-space
         Sequential Algorithm for minGRU:
                 z_t ← σ(f_z(x_t))
                 h˜_t ← g(f_h(x_t))
@@ -46,6 +47,8 @@ class minGRU(Module):
         # multiplying the original values but with better numerical stability
 
     def forward(self, x, h0=None):
+        # x: (batch_size, seq_len, input_size)
+        # h_0: (batch_size, 1, hidden_size)
         k = self.f_z(x)
         log_z = -F.softplus(-k)
         log_coeffs = -F.softplus(k)
