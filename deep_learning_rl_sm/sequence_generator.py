@@ -1,9 +1,11 @@
+# @Tim: check if this can be deleted as the generate_seq function is now a method of OurEnv
+
 import copy
-from deep_learning_rl_sm.environments.our_gym import Our_Env
+from deep_learning_rl_sm.environments.our_gym import OurEnv
 from environments import connect_four
 
 
-def generate_seq(environment: Our_Env, no_sequences: int, max_seq_len=1000, actor=None, adv_actor=None):
+def generate_seq(environment: OurEnv, no_sequences: int, max_seq_len=1000, actor=None, adv_actor=None):
     sequences = []
     act_space = environment.action_space
     for _ in range(no_sequences):
