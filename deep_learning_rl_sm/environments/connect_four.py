@@ -10,7 +10,7 @@ def _get_info():
     return 0
 
 
-class connect_four_env(OurEnv):
+class ConnectFour(OurEnv):
 
     def __init__(self, width: int = 7, length: int = 6):
         # The size of the square grid
