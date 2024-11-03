@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from minGRU import minGRU
-from deep_learning_rl_sm.nets import Actor
+from deep_learning_rl_sm.neuralnets.nets import Actor
 
 
 class minGRU_Reinformer(nn.Module):
@@ -101,11 +101,7 @@ class minGRU_Reinformer(nn.Module):
         action_dist_preds = self.predict_action(h[:, 1])  # predict action given s, R
         state_preds = self.predict_state(h[:, 2])  # predict next state given s, R, a
 
-        return (
-            rtg_preds,
-            action_dist_preds,
-            state_preds,
-        )
+        return rtg_preds, action_dist_preds, state_preds
 
     def temp(self):
         return torch.exp(self.log_tmp)
