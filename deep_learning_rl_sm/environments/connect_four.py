@@ -19,7 +19,6 @@ class ConnectFour(OurEnv):
 
         # Define the agent and target location; randomly chosen in `reset` and updated in `step`
         self._curr_state = np.zeros((self.length, self.width))
-        self._reset_state = np.zeros((self.length, self.width))
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`-1}^2
@@ -42,8 +41,7 @@ class ConnectFour(OurEnv):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
 
-        self._curr_state = self._reset_state
-
+        self._curr_state = np.zeros((self.length, self.width))
         obs = self._get_obs()
         inf = _get_info()  # info not used yet (not sure if we need this tbh)
 
