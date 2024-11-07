@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from minGRU import minGRU
+from deep_learning_rl_sm.neuralnets.minGRU import minGRU
 from deep_learning_rl_sm.neuralnets.nets import Actor
 
 
@@ -25,8 +25,8 @@ class minGRU_Reinformer(nn.Module):
         self.h_dim = h_dim
 
         # minGRU blocks
-        seq_len_in = self.num_inputs * context_len
         self.num_inputs = 3
+        seq_len_in = self.num_inputs * context_len
         min_gru_blocks = [
             minGRU(self.h_dim)
             for _ in range(n_blocks)
@@ -34,17 +34,17 @@ class minGRU_Reinformer(nn.Module):
         self.min_gru_stacked = nn.Sequential(*min_gru_blocks)
 
         # projection heads (project to embedding) /same as paper
-        self.embed_ln = nn.LayerNorm(h_dim)
-        self.embed_timestep = nn.Embedding(max_timestep, h_dim)
-        self.embed_state = nn.Linear(state_dim, h_dim)
-        self.embed_rtg = nn.Linear(1, h_dim)
-        self.embed_action = nn.Linear(act_dim, h_dim)
+        self.embed_ln = nn.LayerNorm(self.h_dim)
+        self.embed_timestep = nn.Embedding(max_timestep, self.h_dim)
+        self.embed_state = nn.Linear(np.prod(self.s_dim), self.h_dim)
+        self.embed_rtg = nn.Linear(1, self.h_dim)
+        self.embed_action = nn.Linear(self.a_dim, self.h_dim)
 
         # prediction heads /same as paper
-        self.predict_rtg = nn.Linear(h_dim, 1)
+        self.predict_rtg = nn.Linear(self.h_dim, 1)
         # stochastic action (output is distribution)
-        self.predict_action = Actor(h_dim, self.act_dim)
-        self.predict_state = nn.Linear(h_dim, state_dim)
+        self.predict_action = Actor(self.h_dim, self.a_dim)
+        self.predict_state = nn.Linear(self.h_dim, np.prod(self.s_dim))
 
         # For entropy /same as paper
         self.log_tmp = torch.tensor(np.log(init_tmp))

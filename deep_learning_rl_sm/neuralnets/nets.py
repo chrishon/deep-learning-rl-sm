@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from torch import distributions as pyd
+from torch import distributions as torch_dist
 
 
 class Actor(nn.Module):
@@ -16,7 +16,7 @@ class Actor(nn.Module):
     def forward(self, x):
         action_mean = torch.tanh(self.mu(x))
         action_std = torch.exp(self.log_std(x).clamp(self.log_std_min, self.log_std_max))
-        return pyd.Normal(action_mean, action_std)
+        return torch_dist.Normal(action_mean, action_std)
 
 
 

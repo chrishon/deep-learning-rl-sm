@@ -6,7 +6,7 @@ from environments import connect_four
 
 # use this to test the seq gen in the individual envs
 c4 = connect_four.ConnectFour()
-seqs = c4.generate_seq(2)
+seqs = c4.generate_seq(1000)
 print(seqs[0])
 print()
 print(seqs[1])

@@ -30,6 +30,8 @@ class ConnectFour(OurEnv):
         self.action_mask = np.array([True for _ in range(7)], dtype=np.int8)
         self.no_actions = 7
         self.action_space = gym.spaces.Discrete(self.no_actions)
+        self.action_dim = 1
+        self.state_dim = np.shape(self._curr_state)
 
         """self.adv_action_list_for_test = [1, 2, 2, 3, 3, 3]
         self.adv_test_action_idx = 0"""  # for testing
@@ -42,6 +44,7 @@ class ConnectFour(OurEnv):
         super().reset(seed=seed)
 
         self._curr_state = np.zeros((self.length, self.width))
+        self.action_mask = np.array([True for _ in range(7)], dtype=np.int8)
         obs = self._get_obs()
         inf = _get_info()  # info not used yet (not sure if we need this tbh)
 
@@ -86,6 +89,10 @@ class ConnectFour(OurEnv):
         # iff top row full for selected column throw exception
         if self._curr_state[0, action] != 0:
             print("invalid actions should never be taken. (i.e. this column is full)...")
+            print()
+            print(self._curr_state)
+            print()
+            print(action)
             raise Exception
         insert_row = np.where(self._curr_state[:, action] == 0)[0][-1]
         self._curr_state[insert_row, action] = 1  # player indicates its pieces by a 1

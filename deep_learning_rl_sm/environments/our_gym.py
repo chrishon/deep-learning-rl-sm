@@ -21,6 +21,8 @@ class OurEnv(gym.Env):
     def __init__(self, action_mask: gym.spaces.Space):
         super(OurEnv, self).__init__()
         self.action_mask = action_mask
+        self.state_dim = ()
+        self.action_dim = ()
 
     def generate_seq(self, no_sequences: int, max_seq_len: int = 10000, actor=None, adv_actor=None):
         sequences = []

@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 
 
 class Trainer:
-    def __init__(self, model, dataset, criterion, optimizer: Optimizer, parsed_args, batch_size: int = 32,
+    def __init__(self, model, dataset, optimizer: Optimizer, scheduler,  parsed_args, batch_size: int = 32,
                  learning_rate: float = 1e-3, num_epochs: int = 10, device=None):
         self.tau = parsed_args["tau"]
         self.grad_norm = parsed_args["grad_norm"]
@@ -25,7 +25,7 @@ class Trainer:
 
         # Define optimizer and loss function
         self.optimizer = optimizer
-        self.criterion = criterion
+        self.scheduler = scheduler
 
     def train_step(
             self,
@@ -121,7 +121,7 @@ class Trainer:
 
         env = parsed_args["env"]
         dataset = parsed_args["dataset"]
-        parsed_args["batch_size"] = 16 if dataset == "complete" else parsed_args["batch_size"] = 256
+        parsed_args["batch_size"] = 16 if dataset == "complete" else 256
         if env in ["kitchen", "maze2d", "antmaze"]:
             parsed_args["num_eval_ep"] = 100
         # TODO set data path
@@ -185,8 +185,9 @@ class Trainer:
                             "training/loss": loss,
                         }
                     )
-            normalized_score = evaluator(
-                model=Trainer.model
+            # TODO fill in dataset
+            normalized_score = self.evaluate(
+                dataset=None
             )
             score_list_normalized.append(normalized_score)
             if parsed_args["use_wandb"]:
@@ -230,10 +231,3 @@ class Trainer:
         print(f"Evaluation Loss: {avg_loss:.4f}")
         return avg_loss
 
-    def predict(self, states):
-        self.model.eval()
-        with torch.no_grad():
-            states = states.to(self.device)
-            action_logits = self.model(states)
-            predicted_actions = torch.argmax(action_logits, dim=-1)
-        return predicted_actions.cpu().numpy()

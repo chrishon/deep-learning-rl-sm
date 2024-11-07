@@ -1,12 +1,16 @@
 import argparse
+
+import numpy as np
+import torch
 import wandb
 from deep_learning_rl_sm.trainer.trainer import Trainer
 from deep_learning_rl_sm.neuralnets.minGRU_Reinformer import minGRU_Reinformer
-from deep_learning_rl_sm.environments.connect_four import ConnectFour
+from deep_learning_rl_sm.neuralnets.lamb import Lamb
+from deep_learning_rl_sm.environments import connect_four
 
-env = ConnectFour()
+env = connect_four.ConnectFour()
 # maybe push generate sequences into the trainer class somewhere
-sequences = env.generate_seq(no_sequences=100, max_seq_len=1000)
+sequences = env.generate_seq(no_sequences=1000)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_type", choices=["reinformer"], default="reinformer")
@@ -31,6 +35,7 @@ parser.add_argument("--num_updates_per_iter", type=int, default=5000)
 parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--seed", type=int, default=2024)
 parser.add_argument("--init_temperature", type=float, default=0.1)
+parser.add_argument("--eps", type=float, default=1e-8)
 # use_wandb = False
 parser.add_argument("--use_wandb", action='store_true', default=False)
 args = parser.parse_args()
@@ -41,7 +46,29 @@ if args.use_wandb:
         project="Reinformer",
         config=vars(args)
     )
-# TODO fill in args for model and trainer!
-model = minGRU_Reinformer()
-trainer = Trainer(model=model,)
-trainer.train(vars(args))
+# TODO have discrete set based on environment choice instead of manual
+discrete = True
+# TODO explore different target entropies
+# entropy to encourage exploration in RL typically -action_dim for continuous actions and -log(action_dim) when discrete
+target_entropy = -np.log(np.prod(env.action_dim)) if discrete else -np.prod(env.action_dim)
+args = vars(args)
+model = minGRU_Reinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],
+                          h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
+                          drop_p=args["dropout_p"], init_tmp=args["init_temperature"],
+                          target_entropy=target_entropy)
+optimizer = Lamb(
+            model.parameters(),
+            lr=args["lr"],
+            weight_decay=args["wd"],
+            eps=args["eps"],
+        )
+scheduler = torch.optim.lr_scheduler.LambdaLR(
+            optimizer,
+            lambda steps: min((steps + 1) / args["warmup_steps"], 1)
+        )
+# expect the next line to cause problems (need padding to make this work)
+# TODO fix!!!
+print(type(sequences[0][0]))
+sequences = torch.tensor(sequences)
+trainer = Trainer(model=model, dataset=sequences, optimizer=optimizer, scheduler=scheduler, parsed_args=args)
+trainer.train(args)
