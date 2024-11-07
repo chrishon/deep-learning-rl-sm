@@ -8,6 +8,7 @@ from deep_learning_rl_sm.neuralnets.minGRU_Reinformer import minGRU_Reinformer
 from deep_learning_rl_sm.neuralnets.lamb import Lamb
 from deep_learning_rl_sm.environments import connect_four
 
+# TODO generate our datasets separately so we only have to load them here! input format!
 env = connect_four.ConnectFour()
 # maybe push generate sequences into the trainer class somewhere
 sequences = env.generate_seq(no_sequences=1000)
@@ -69,6 +70,8 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(
 # expect the next line to cause problems (need padding to make this work)
 # TODO fix!!!
 print(type(sequences[0][0]))
+print(sequences[0][0])
+
 sequences = torch.tensor(sequences)
 trainer = Trainer(model=model, dataset=sequences, optimizer=optimizer, scheduler=scheduler, parsed_args=args)
 trainer.train(args)

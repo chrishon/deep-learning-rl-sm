@@ -37,7 +37,7 @@ class ConnectFour(OurEnv):
         self.adv_test_action_idx = 0"""  # for testing
 
     def _get_obs(self):
-        return {"state": self._curr_state}
+        return self._curr_state
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         # We need the following line to seed self.np_random
