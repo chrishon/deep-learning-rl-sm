@@ -8,9 +8,9 @@ def calculate_returns(seq):
     end_idx = len(seq)-1
     ret_2_go = 0
     for i in range(len(seq)):
-        if len(seq[end_idx-i]) == 1:
+        if isinstance(seq[end_idx-i], np.ndarray):
             # reached first element of sequence which is just the initial state
-            break
+            continue
         # return to go is the 5th entry and reward is 4th entry!
         seq[end_idx-i][4] = ret_2_go
         ret_2_go += seq[end_idx-i][3]
@@ -30,6 +30,7 @@ class OurEnv(gym.Env):
         for _ in range(no_sequences):
             first_state, _ = self.reset()
             seq = [copy.deepcopy(first_state)]
+            # print(copy.deepcopy(first_state))
             for t in range(max_seq_len):
                 action = act_space.sample(self.action_mask)
                 next_state, reward, done, _, _ = self.step(action)

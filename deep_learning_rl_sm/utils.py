@@ -14,6 +14,9 @@ def extract_dataset(data):
     dones = []
     for data_traj in data:
         time_steps.append(torch.tensor([t[0] if type(t) is list else [] for t in data_traj]))
+        """for t in data_traj:
+            if type(t) is not list:
+                print(t)"""
         states.append(torch.tensor([t[5] if type(t) is list else t for t in data_traj]))
         action_masks.append(torch.tensor([t[1] if type(t) is list else [] for t in data_traj]))
         actions.append(torch.tensor([t[2] if type(t) is list else [] for t in data_traj]))
@@ -21,6 +24,8 @@ def extract_dataset(data):
         rewards.append(torch.tensor([t[3] if type(t) is list else [] for t in data_traj]))
         dones.append(torch.tensor([0 for _ in data_traj]))
         dones[-1][-1] = 1  # sequence only stops when game completed (in our cases so far)
+    """print()
+    print(states[0])"""
     return time_steps, action_masks, actions, returns_to_go, rewards, states, dones
 
 
@@ -35,17 +40,30 @@ traj_mask == dones
 """
 
 
-def generate_data():
+def generate_data(batch_size=3):
     # Convert to tensors
     c4 = connect_four.ConnectFour()
-    data = c4.generate_seq(1000)
+    data = c4.generate_seq(batch_size)
     # (t, mask, act, rew, ret, nxt_state)
     time_steps, action_masks, actions, returns_to_go, rewards, states, traj_masks = extract_dataset(data)
-    # TODO padding
-    states = torch.stack(states)  # Shape: (num_samples, state_dim)
-    actions = torch.tensor(actions, dtype=torch.long)  # Shape: (num_samples,)
-    rewards = torch.tensor(rewards, dtype=torch.float32)  # Shape: (num_samples,)
-    dones = torch.tensor(traj_masks, dtype=torch.float32)  # Shape: (num_samples,)
+    # TODO finish padding
+    # note: +1 indicates player, 0 indicates empty and -1 is adversary
+    # (rows=6) * (cols=7) =42 for connect four
+    padded_state = torch.full((22, 42), -100)  # -100 indicates state padded (will mask later to deal with this)
+    padded_else = torch.full((21, 1), -100)
+    # maximum_states = 22
+    # maximum_rest = 21
+    # maximum one more for states because of additional initial state
+    for idx, state in enumerate(states):
+        tmp = padded_state
+        tmp[:state.shape[0], :] = state.flatten(start_dim=-2)
+        states[idx] = tmp
+    states = torch.stack(states)
+    """print(states.shape)
+    print(states[0].view(22, 6, 7))"""
+    actions = torch.tensor(actions, dtype=torch.long)
+    rewards = torch.tensor(rewards, dtype=torch.float32)
+    dones = torch.tensor(traj_masks, dtype=torch.float32)
 
     # Save the data
     data_path = 'deep_learning_rl_sm/data/offline_data.pt'
