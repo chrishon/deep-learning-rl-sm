@@ -43,4 +43,5 @@ class OurEnv(gym.Env):
                     break
             seq = calculate_returns(seq)
             sequences.append(seq)
+        # sequences has the form: [state, [t, mask, act, rew, ret, state],[t, mask, act, rew, ret, state],...]
         return sequences
