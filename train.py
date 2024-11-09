@@ -11,7 +11,7 @@ from deep_learning_rl_sm.environments import connect_four
 # TODO generate our datasets separately so we only have to load them here! input format!
 env = connect_four.ConnectFour()
 # maybe push generate sequences into the trainer class somewhere
-data = torch.load("deep_learning_rl_sm/data/offline_data.pt")
+data = torch.load("./data/offline_data.pt")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_type", choices=["reinformer"], default="reinformer")
@@ -67,6 +67,35 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(
             optimizer,
             lambda steps: min((steps + 1) / args["warmup_steps"], 1)
         )
+
+import torch
+from torch.utils.data import Dataset, DataLoader
+
+class CustomDataset(Dataset):
+    def __init__(self, data):
+        # Storing each data item separately for easy access
+        self.states = data['states']
+        self.actions = data['actions']
+        self.rewards = data['rewards']
+        self.dones = data['dones']
+        self.time_steps = data['time_steps']
+        self.action_masks = data['action_masks']
+        self.returns_to_go = data['returns_to_go']
+        
+    def __len__(self):
+        # Return the number of samples (assuming all lists have the same length)
+        return len(self.states)
+
+    def __getitem__(self, idx):
+        # Return a tuple of each item type for a given index
+        return (self.states[idx,:,:], 
+                self.actions[idx,:,:], 
+                self.rewards[idx,:,:], 
+                self.dones[idx,:,:], 
+                self.time_steps[idx,:,:], 
+                self.action_masks[idx,:,:], 
+                self.returns_to_go[idx,:,:])
+dataset = CustomDataset(data)
 # expect the next line to cause problems (need padding to make this work)
-trainer = Trainer(model=model, dataset=data, optimizer=optimizer, scheduler=scheduler, parsed_args=args)
+trainer = Trainer(model=model, dataset=dataset, optimizer=optimizer, scheduler=scheduler, parsed_args=args)
 trainer.train(args)
