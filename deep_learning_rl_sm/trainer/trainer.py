@@ -137,7 +137,7 @@ class Trainer:
         )
         iterate_data = iter(data_loader)
         # TODO implement get_state_stats for our envs???
-        state_mean, state_std = dataset.get_state_stats()
+        # state_mean, state_std = dataset.get_state_stats()
 
         # TODO initialize env random seed
 
