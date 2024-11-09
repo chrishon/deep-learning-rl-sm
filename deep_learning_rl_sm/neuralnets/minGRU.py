@@ -23,6 +23,7 @@ def parallel_scan_log(log_coefficients, log_values):
 class minGRU(Module):
     def __init__(self, dim, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.dim=dim
         self.f_hidden = Linear(dim, dim, bias=False)
         self.f_z = Linear(dim, dim, bias=False)
         # output of f_z can be viewed as the proportion of the info from the current timestep that is incorporated into
@@ -49,6 +50,7 @@ class minGRU(Module):
     def forward(self, x, h0=None):
         # x: (batch_size, seq_len, input_size)
         # h_0: (batch_size, 1, hidden_size)
+        h0 = torch.zeros(x.shape[0], 1, self.dim)
         k = self.f_z(x)
         log_z = -F.softplus(-k)
         log_coeffs = -F.softplus(k)
