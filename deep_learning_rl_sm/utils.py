@@ -1,5 +1,6 @@
 from deep_learning_rl_sm.environments import connect_four
 import torch
+import os
 
 
 def extract_dataset(data):
@@ -73,6 +74,8 @@ def generate_data(batch_size=1000):
     returns_to_go = torch.stack(returns_to_go)
 
     # Save the data
+    if not os.path.exists("data/"):
+        os.makedirs("data/")
     data_path = 'data/offline_data.pt'
     torch.save({
         'states': states,
