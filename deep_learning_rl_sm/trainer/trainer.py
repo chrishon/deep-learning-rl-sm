@@ -40,12 +40,17 @@ class Trainer:
         self.model.train()
         # data to gpu ------------------------------------------------
         timesteps = timesteps.to(self.device)  # B x T
+        states = states[:,1:,:].float()
         states = states.to(self.device)  # B x T x state_dim
+        actions = actions.float()
         actions = actions.to(self.device)  # B x T x act_dim
         returns_to_go = returns_to_go.to(self.device).unsqueeze(
             dim=-1
         )  # B x T x 1
-
+        returns_to_go = returns_to_go.float()
+        min_timestep = timesteps.min()
+        max_timestep = timesteps.max()
+        print(f"Min timestep: {min_timestep}, Max timestep: {max_timestep}")
         rewards = rewards.to(self.device).unsqueeze(
             dim=-1
         )  # B x T x 1
@@ -120,7 +125,7 @@ class Trainer:
         torch.manual_seed(seed)
 
         env = parsed_args["env"]
-        dataset = parsed_args["dataset"]
+        dataset = self.dataset#parsed_args["dataset"]
         parsed_args["batch_size"] = 16 if dataset == "complete" else 256
         if env in ["kitchen", "maze2d", "antmaze"]:
             parsed_args["num_eval_ep"] = 100
@@ -132,8 +137,7 @@ class Trainer:
             dataset=dataset,
             batch_size=parsed_args["batch_size"],
             shuffle=True,
-            pin_memory=True,
-            drop_last=True,
+
         )
         iterate_data = iter(data_loader)
         # TODO implement get_state_stats for our envs???
@@ -141,8 +145,8 @@ class Trainer:
 
         # TODO initialize env random seed
 
-        state_dim = env.observation_space.shape[0]
-        act_dim = env.action_space.shape[0]
+        # state_dim = env.observation_space.shape[0]
+        # act_dim = env.action_space.shape[0]
 
         model_type = parsed_args["model_type"]
 
@@ -151,31 +155,38 @@ class Trainer:
         score_list_normalized = []
         for _ in range(1, max_train_iters + 1):
             for epoch in range(num_updates_per_iter):
+                print(epoch)
+
                 try:
+                    print("Trying to get batch")
                     (
-                        timesteps,
                         states,
                         actions,
-                        returns_to_go,
                         rewards,
                         traj_mask,
+                        timesteps,
+                        action_masks,
+                        returns_to_go
+
                     ) = next(iterate_data)
                 except StopIteration:
                     iterate_data = iter(data_loader)  # start again with original load
                     (
-                        timesteps,
                         states,
                         actions,
-                        returns_to_go,
                         rewards,
                         traj_mask,
+                        timesteps,
+                        action_masks,
+                        returns_to_go
+
                     ) = next(iterate_data)
 
                 loss = self.train_step(
-                    timesteps=timesteps,
+                    timesteps=timesteps.squeeze(2),
                     states=states,
                     actions=actions,
-                    returns_to_go=returns_to_go,
+                    returns_to_go=returns_to_go.squeeze(2),
                     rewards=rewards,
                     traj_mask=traj_mask
                 )
