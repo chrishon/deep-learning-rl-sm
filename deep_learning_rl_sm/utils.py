@@ -33,7 +33,7 @@ def generate_data(batch_size=1000):
     # PADDING PARAMETERS
     padded_state = torch.full((22, 42), -100)  # Padding value for states
     padded_mask = torch.full((21, 7), -100)  # Padding for mask
-    padded_else = torch.full((21, 1), -100)  # Padding value for other variables
+    padded_else = torch.full((21, 1), 0)  # Padding value for other variables
 
     # PADDING STATES
     for idx, state in enumerate(states):
@@ -74,8 +74,8 @@ def generate_data(batch_size=1000):
     returns_to_go = torch.stack(returns_to_go)
 
     # Save the data
-    if not os.path.exists("data/"):
-        os.makedirs("data/")
+    if not os.path.exists("./data/"):
+        os.makedirs("./data/")
     data_path = 'data/offline_data.pt'
     torch.save({
         'states': states,
