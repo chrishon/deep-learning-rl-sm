@@ -27,6 +27,12 @@ class Trainer:
         self.optimizer = optimizer
         self.scheduler = scheduler
 
+        self.log_temperature_optimizer = torch.optim.Adam(
+            [self.model.log_tmp],
+            lr=1e-4,
+            betas=[0.9, 0.999],
+        )
+
     def train_step(
             self,
             timesteps,
@@ -87,13 +93,15 @@ class Trainer:
         )
         # action_loss ------------------------------------------------
         actions_target = torch.clone(actions)
+        print("Action Target shape: ", actions_target.shape)
+        print("traj mask shape: ", traj_mask.shape)
         log_likelihood = actions_dist_preds.log_prob(
-            actions_target
-        ).sum(axis=2)[
-            traj_mask > 0
+            actions_target.view(-1)
+        ).sum(axis=2).view(-1)[
+            traj_mask.view(-1) > 0
             ].mean()
         entropy = actions_dist_preds.entropy().sum(axis=2).mean()
-        action_loss = -(log_likelihood + self.model.temperature().detach() * entropy)
+        action_loss = -(log_likelihood + self.model.temp().detach() * entropy)
 
         loss = returns_to_go_loss + action_loss
 
@@ -108,10 +116,12 @@ class Trainer:
 
         self.log_temperature_optimizer.zero_grad()
         temperature_loss = (
-                self.model.temperature() * (entropy - self.model.target_entropy).detach()
+                self.model.temp() * (entropy - self.model.target_entropy).detach()
         )
         temperature_loss.backward()
         self.log_temperature_optimizer.step()
+
+        
 
         self.scheduler.step()
 

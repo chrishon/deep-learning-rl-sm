@@ -43,7 +43,7 @@ class minGRU_Reinformer(nn.Module):
         # prediction heads /same as paper
         self.predict_rtg = nn.Linear(self.h_dim, 1)
         # stochastic action (output is distribution)
-        self.predict_action = Actor(self.h_dim, self.a_dim)
+        self.predict_action = Actor( self.a_dim, self.h_dim)
         self.predict_state = nn.Linear(self.h_dim, np.prod(self.s_dim))
 
         # For entropy /same as paper
