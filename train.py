@@ -11,7 +11,7 @@ from deep_learning_rl_sm.environments import connect_four
 # TODO generate our datasets separately so we only have to load them here! input format!
 env = connect_four.ConnectFour()
 # maybe push generate sequences into the trainer class somewhere
-data = torch.load("./data/offline_data.pt")
+data = torch.load("deep_learning_rl_sm/data/offline_data.pt")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_type", choices=["reinformer"], default="reinformer")

@@ -30,10 +30,14 @@ def generate_data(batch_size=1000):
     data = c4.generate_seq(batch_size)
     time_steps, action_masks, actions, returns_to_go, rewards, states, traj_masks = extract_dataset(data)
 
+    # [1,2,3,4,...] so 0 can be used as a padding index
+    time_steps = [time_step_tensor + 1 for time_step_tensor in time_steps]
+
     # PADDING PARAMETERS
     padded_state = torch.full((22, 42), -100)  # Padding value for states
     padded_mask = torch.full((21, 7), -100)  # Padding for mask
-    padded_else = torch.full((21, 1), 0)  # Padding value for other variables
+    padded_else = torch.full((21, 1), -100)  # Padding value for other variables
+    padded_timestep = torch.full((21, 1), 0)
 
     # PADDING STATES
     for idx, state in enumerate(states):
@@ -47,7 +51,7 @@ def generate_data(batch_size=1000):
         pad_act = padded_else.clone()
         pad_rew = padded_else.clone()
         pad_dones = padded_else.clone()
-        pad_time = padded_else.clone()
+        pad_time = padded_timestep.clone()
         pad_mask = padded_mask.clone()
         pad_rtg = padded_else.clone()
 
@@ -101,10 +105,10 @@ d = loaded_data['dones']
 t_s = loaded_data['time_steps']
 a_m = loaded_data['action_masks']
 r_t_g = loaded_data['returns_to_go']
-print(s.shape)  # state trajectories have one more timestep than the rest
+"""print(s.shape)  # state trajectories have one more timestep than the rest
 print(a.shape)
 print(r.shape)
 print(d.shape)
 print(t_s.shape)
 print(a_m.shape)
-print(r_t_g.shape)
+print(r_t_g.shape)"""
