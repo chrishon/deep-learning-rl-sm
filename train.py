@@ -62,28 +62,41 @@ def main():
             project="Reinformer",
             config=vars(args)
         )
-        
-    # TODO explore different target entropies
-    # entropy to encourage exploration in RL typically -action_dim for continuous actions and -log(action_dim) when discrete
-    target_entropy = -np.log(np.prod(action_dim)) if discrete else -np.prod(action_dim)
-    args = vars(args)
-    model = minGRU_Reinformer(state_dim=state_dim, act_dim=action_dim, n_blocks=args["n_blocks"],
-                            h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
-                            drop_p=args["dropout_p"], init_tmp=args["init_temperature"],
-                            target_entropy=target_entropy)
-    optimizer = Lamb(
-                model.parameters(),
-                lr=args["lr"],
-                weight_decay=args["wd"],
-                eps=args["eps"],
-            )
-    scheduler = torch.optim.lr_scheduler.LambdaLR(
-                optimizer,
-                lambda steps: min((steps + 1) / args["warmup_steps"], 1)
-            )
-    # expect the next line to cause problems (need padding to make this work)
-    trainer = Trainer(model=model, dataset=data, optimizer=optimizer, scheduler=scheduler, parsed_args=args)
-    trainer.train(args)
 
-if __name__ == "__main__":
-    main()
+scheduler = torch.optim.lr_scheduler.LambdaLR(
+            optimizer,
+            lambda steps: min((steps + 1) / args["warmup_steps"], 1)
+        )
+
+import torch
+from torch.utils.data import Dataset, DataLoader
+
+class CustomDataset(Dataset):
+    def __init__(self, data):
+        # Storing each data item separately for easy access
+        self.states = data['states']
+        self.actions = data['actions']
+        self.rewards = data['rewards']
+        self.dones = data['dones']
+        self.time_steps = data['time_steps']
+        self.action_masks = data['action_masks']
+        self.returns_to_go = data['returns_to_go']
+        
+    def __len__(self):
+        # Return the number of samples (assuming all lists have the same length)
+        return len(self.states)
+
+    def __getitem__(self, idx):
+        # Return a tuple of each item type for a given index
+        return (self.states[idx,:,:], 
+                self.actions[idx,:,:], 
+                self.rewards[idx,:,:], 
+                self.dones[idx,:,:], 
+                self.time_steps[idx,:,:], 
+                self.action_masks[idx,:,:], 
+                self.returns_to_go[idx,:,:])
+dataset = CustomDataset(data)
+# expect the next line to cause problems (need padding to make this work)
+trainer = Trainer(model=model, dataset=dataset, optimizer=optimizer, scheduler=scheduler, parsed_args=args)
+trainer.train(args)
+

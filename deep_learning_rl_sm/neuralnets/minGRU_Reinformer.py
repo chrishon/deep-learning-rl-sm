@@ -35,7 +35,7 @@ class minGRU_Reinformer(nn.Module):
 
         # projection heads (project to embedding) /same as paper
         self.embed_ln = nn.LayerNorm(self.h_dim)
-        self.embed_timestep = nn.Embedding(max_timestep, self.h_dim)
+        self.embed_timestep = nn.Embedding(max_timestep, self.h_dim, padding_idx=0)
         self.embed_state = nn.Linear(np.prod(self.s_dim), self.h_dim)
         self.embed_rtg = nn.Linear(1, self.h_dim)
         self.embed_action = nn.Linear(self.a_dim, self.h_dim)
@@ -43,7 +43,7 @@ class minGRU_Reinformer(nn.Module):
         # prediction heads /same as paper
         self.predict_rtg = nn.Linear(self.h_dim, 1)
         # stochastic action (output is distribution)
-        self.predict_action = Actor(self.h_dim, self.a_dim)
+        self.predict_action = Actor( self.a_dim, self.h_dim)
         self.predict_state = nn.Linear(self.h_dim, np.prod(self.s_dim))
 
         # For entropy /same as paper
@@ -61,10 +61,12 @@ class minGRU_Reinformer(nn.Module):
         B, T, _ = states.shape
 
         embd_t = self.embed_timestep(timesteps)
+        print("embed_t dim: ", embd_t.shape)
         # time embeddings ≈ pos embeddings
         # add time embedding to each embedding below for temporal context
         embd_s = self.embed_state(states) + embd_t
         embd_a = self.embed_action(actions) + embd_t
+        print(self.embed_rtg(returns_to_go).shape)
         embd_rtg = self.embed_rtg(returns_to_go) + embd_t
 
         # stack states, RTGs, and actions and reshape sequence as
@@ -83,7 +85,7 @@ class minGRU_Reinformer(nn.Module):
         )
 
         h = self.embed_ln(h)
-
+        print("h shape: ", h.shape)
         # transformer and prediction
         h = self.min_gru_stacked(h)
 

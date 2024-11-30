@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 
 
 class Trainer:
-    def __init__(self, model, dataset, optimizer: Optimizer, scheduler,  parsed_args, batch_size: int = 32,
+    def __init__(self, model, dataset, optimizer: Optimizer, scheduler, parsed_args, batch_size: int = 32,
                  learning_rate: float = 1e-3, num_epochs: int = 10, device=None):
         self.tau = parsed_args["tau"]
         self.grad_norm = parsed_args["grad_norm"]
@@ -27,6 +27,12 @@ class Trainer:
         self.optimizer = optimizer
         self.scheduler = scheduler
 
+        self.log_temperature_optimizer = torch.optim.Adam(
+            [self.model.log_tmp],
+            lr=1e-4,
+            betas=[0.9, 0.999],
+        )
+
     def train_step(
             self,
             timesteps,
@@ -36,16 +42,20 @@ class Trainer:
             rewards,
             traj_mask
     ):
-        # TODO add necessary args to class during init e.g. tau
         self.model.train()
         # data to gpu ------------------------------------------------
         timesteps = timesteps.to(self.device)  # B x T
+        states = states[:, 1:, :].float()
         states = states.to(self.device)  # B x T x state_dim
+        actions = actions.float()
         actions = actions.to(self.device)  # B x T x act_dim
         returns_to_go = returns_to_go.to(self.device).unsqueeze(
             dim=-1
         )  # B x T x 1
-
+        returns_to_go = returns_to_go.float()
+        min_timestep = timesteps.min()
+        max_timestep = timesteps.max()
+        print(f"Min timestep: {min_timestep}, Max timestep: {max_timestep}")
         rewards = rewards.to(self.device).unsqueeze(
             dim=-1
         )  # B x T x 1
@@ -66,10 +76,10 @@ class Trainer:
         returns_to_go_target = torch.clone(returns_to_go).view(
             -1, 1
         )[
-            traj_mask.view(-1, ) > 0
-            ]
+            (traj_mask.view(-1, ) == 0) | (traj_mask.view(-1, ) == 1)
+        ]
         returns_to_go_preds = returns_to_go_preds.view(-1, 1)[
-            traj_mask.view(-1, ) > 0
+            (traj_mask.view(-1, ) == 0) | (traj_mask.view(-1, ) == 1)
             ]
 
         # returns_to_go_loss -----------------------------------------
@@ -82,13 +92,15 @@ class Trainer:
         )
         # action_loss ------------------------------------------------
         actions_target = torch.clone(actions)
+        print("Action Target shape: ", actions_target.shape)
+        print("traj mask shape: ", traj_mask.shape)
         log_likelihood = actions_dist_preds.log_prob(
-            actions_target
-        ).sum(axis=2)[
-            traj_mask > 0
+            actions_target.view(-1)
+        ).sum(axis=2).view(-1)[
+            (traj_mask.view(-1) == 0) | (traj_mask.view(-1) == 1)
             ].mean()
         entropy = actions_dist_preds.entropy().sum(axis=2).mean()
-        action_loss = -(log_likelihood + self.model.temperature().detach() * entropy)
+        action_loss = -(log_likelihood + self.model.temp().detach() * entropy)
 
         loss = returns_to_go_loss + action_loss
 
@@ -103,7 +115,7 @@ class Trainer:
 
         self.log_temperature_optimizer.zero_grad()
         temperature_loss = (
-                self.model.temperature() * (entropy - self.model.target_entropy).detach()
+                self.model.temp() * (entropy - self.model.target_entropy).detach()
         )
         temperature_loss.backward()
         self.log_temperature_optimizer.step()
@@ -120,7 +132,7 @@ class Trainer:
         torch.manual_seed(seed)
 
         env = parsed_args["env"]
-        dataset = parsed_args["dataset"]
+        dataset = self.dataset  # parsed_args["dataset"]
         parsed_args["batch_size"] = 16 if dataset == "complete" else 256
         if env in ["kitchen", "maze2d", "antmaze"]:
             parsed_args["num_eval_ep"] = 100
@@ -132,8 +144,7 @@ class Trainer:
             dataset=dataset,
             batch_size=parsed_args["batch_size"],
             shuffle=True,
-            pin_memory=True,
-            drop_last=True,
+
         )
         iterate_data = iter(data_loader)
         # TODO implement get_state_stats for our envs???
@@ -141,8 +152,8 @@ class Trainer:
 
         # TODO initialize env random seed
 
-        state_dim = env.observation_space.shape[0]
-        act_dim = env.action_space.shape[0]
+        # state_dim = env.observation_space.shape[0]
+        # act_dim = env.action_space.shape[0]
 
         model_type = parsed_args["model_type"]
 
@@ -151,31 +162,38 @@ class Trainer:
         score_list_normalized = []
         for _ in range(1, max_train_iters + 1):
             for epoch in range(num_updates_per_iter):
+                print(epoch)
+
                 try:
+                    print("Trying to get batch")
                     (
-                        timesteps,
                         states,
                         actions,
-                        returns_to_go,
                         rewards,
                         traj_mask,
+                        timesteps,
+                        action_masks,
+                        returns_to_go
+
                     ) = next(iterate_data)
                 except StopIteration:
                     iterate_data = iter(data_loader)  # start again with original load
                     (
-                        timesteps,
                         states,
                         actions,
-                        returns_to_go,
                         rewards,
                         traj_mask,
+                        timesteps,
+                        action_masks,
+                        returns_to_go
+
                     ) = next(iterate_data)
 
                 loss = self.train_step(
-                    timesteps=timesteps,
+                    timesteps=timesteps.squeeze(2),
                     states=states,
                     actions=actions,
-                    returns_to_go=returns_to_go,
+                    returns_to_go=returns_to_go.squeeze(2),
                     rewards=rewards,
                     traj_mask=traj_mask
                 )
@@ -230,4 +248,3 @@ class Trainer:
         avg_loss = total_loss / len(data_loader)
         print(f"Evaluation Loss: {avg_loss:.4f}")
         return avg_loss
-
