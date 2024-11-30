@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 
 
 class Trainer:
-    def __init__(self, model, dataset, optimizer: Optimizer, scheduler,  parsed_args, batch_size: int = 32,
+    def __init__(self, model, dataset, optimizer: Optimizer, scheduler, parsed_args, batch_size: int = 32,
                  learning_rate: float = 1e-3, num_epochs: int = 10, device=None):
         self.tau = parsed_args["tau"]
         self.grad_norm = parsed_args["grad_norm"]
@@ -42,11 +42,10 @@ class Trainer:
             rewards,
             traj_mask
     ):
-        # TODO add necessary args to class during init e.g. tau
         self.model.train()
         # data to gpu ------------------------------------------------
         timesteps = timesteps.to(self.device)  # B x T
-        states = states[:,1:,:].float()
+        states = states[:, 1:, :].float()
         states = states.to(self.device)  # B x T x state_dim
         actions = actions.float()
         actions = actions.to(self.device)  # B x T x act_dim
@@ -77,10 +76,10 @@ class Trainer:
         returns_to_go_target = torch.clone(returns_to_go).view(
             -1, 1
         )[
-            traj_mask.view(-1, ) > 0
-            ]
+            (traj_mask.view(-1, ) == 0) | (traj_mask.view(-1, ) == 1)
+        ]
         returns_to_go_preds = returns_to_go_preds.view(-1, 1)[
-            traj_mask.view(-1, ) > 0
+            (traj_mask.view(-1, ) == 0) | (traj_mask.view(-1, ) == 1)
             ]
 
         # returns_to_go_loss -----------------------------------------
@@ -98,7 +97,7 @@ class Trainer:
         log_likelihood = actions_dist_preds.log_prob(
             actions_target.view(-1)
         ).sum(axis=2).view(-1)[
-            traj_mask.view(-1) > 0
+            (traj_mask.view(-1) == 0) | (traj_mask.view(-1) == 1)
             ].mean()
         entropy = actions_dist_preds.entropy().sum(axis=2).mean()
         action_loss = -(log_likelihood + self.model.temp().detach() * entropy)
@@ -121,8 +120,6 @@ class Trainer:
         temperature_loss.backward()
         self.log_temperature_optimizer.step()
 
-        
-
         self.scheduler.step()
 
         return loss.detach().cpu().item()
@@ -135,7 +132,7 @@ class Trainer:
         torch.manual_seed(seed)
 
         env = parsed_args["env"]
-        dataset = self.dataset#parsed_args["dataset"]
+        dataset = self.dataset  # parsed_args["dataset"]
         parsed_args["batch_size"] = 16 if dataset == "complete" else 256
         if env in ["kitchen", "maze2d", "antmaze"]:
             parsed_args["num_eval_ep"] = 100
@@ -251,4 +248,3 @@ class Trainer:
         avg_loss = total_loss / len(data_loader)
         print(f"Evaluation Loss: {avg_loss:.4f}")
         return avg_loss
-
