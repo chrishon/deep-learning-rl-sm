@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import wandb
 from deep_learning_rl_sm.trainer.trainer import Trainer
-from deep_learning_rl_sm.neuralnets.minGRU_Reinformer import minGRU_Reinformer
+from deep_learning_rl_sm.neuralnets.minimal_reinformer import MinimalReinformer
 from deep_learning_rl_sm.neuralnets.lamb import Lamb
 from deep_learning_rl_sm.environments import connect_four
 
@@ -21,6 +21,7 @@ parser.add_argument("--num_eval_ep", type=int, default=10)
 parser.add_argument("--max_eval_ep_len", type=int, default=1000)
 parser.add_argument("--dataset_dir", type=str, default="data/d4rl_dataset/")
 parser.add_argument("--context_len", type=int, default=5)
+parser.add_argument("--min_rnn", type=str, default="minLSTM")
 parser.add_argument("--n_blocks", type=int, default=4)
 parser.add_argument("--embed_dim", type=int, default=256)
 parser.add_argument("--n_heads", type=int, default=8)
@@ -53,7 +54,7 @@ discrete = True
 # entropy to encourage exploration in RL typically -action_dim for continuous actions and -log(action_dim) when discrete
 target_entropy = -np.log(np.prod(env.action_dim)) if discrete else -np.prod(env.action_dim)
 args = vars(args)
-model = minGRU_Reinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],
+model = MinimalReinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],min_rnn=args["min_rnn"],
                           h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
                           drop_p=args["dropout_p"], init_tmp=args["init_temperature"],
                           target_entropy=target_entropy)

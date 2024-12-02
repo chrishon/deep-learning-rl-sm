@@ -47,16 +47,17 @@ class minGRU(Module):
         # by e.g. converting to log-values, summing and then exponentiating we achieve the same result as
         # multiplying the original values but with better numerical stability
 
-    def forward(self, x, h0=None):
+    def forward(self, x, h_prev=None):
         # x: (batch_size, seq_len, input_size)
         # h_0: (batch_size, 1, hidden_size)
-        h0 = torch.zeros(x.shape[0], 1, self.dim)
+        if h_prev is None:
+            h_prev = torch.zeros(x.shape[0], 1, self.dim)
         k = self.f_z(x)
         log_z = -F.softplus(-k)
         log_coeffs = -F.softplus(k)
-        log_h_0 = log_g(h0)
+        log_h_prev = log_g(h_prev)
         log_tilde_h = log_g(self.f_hidden(x))
-        h = parallel_scan_log(log_coeffs, torch.cat([log_h_0, log_z + log_tilde_h], dim=1))
+        h = parallel_scan_log(log_coeffs, torch.cat([log_h_prev, log_z + log_tilde_h], dim=1))
         return h
 
 
