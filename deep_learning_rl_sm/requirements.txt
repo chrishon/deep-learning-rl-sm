@@ -5,3 +5,4 @@ pytest
 unittest
 torch
 wandb
+h5py
