@@ -30,37 +30,9 @@ class minLSTM(nn.Module):
         self.linear_f = nn.Linear(self.dim, self.dim)
         self.linear_i = nn.Linear(self.dim, self.dim)
         self.linear_h = nn.Linear(self.dim, self.dim)
-
-    def forward(self, x_t,pre_h=None):
-        """
-        pre_h: (batch_size, units) - previous hidden state (h_prev)
-        x_t: (batch_size, input_size) - input at time step t
-        """
-
-        if pre_h is None:
-            pre_h = torch.zeros(x_t.shape[0], 1, self.dim)
-
-        # Forget gate: f_t = sigmoid(W_f * x_t)
-        f_t = torch.sigmoid(self.linear_f(x_t))  # (batch_size, units)
-
-        # Input gate: i_t = sigmoid(W_i * x_t)
-        i_t = torch.sigmoid(self.linear_i(x_t))  # (batch_size, units)
-
-        # Hidden state: tilde_h_t = W_h * x_t
-        tilde_h_t = self.linear_h(x_t)  # (batch_size, units)
-
-        # Normalize the gates
-        sum_f_i = f_t + i_t
-        f_prime_t = f_t / sum_f_i  # (batch_size, units)
-        i_prime_t = i_t / sum_f_i  # (batch_size, units)
-
-        # New hidden state: h_t = f_prime_t * pre_h + i_prime_t * tilde_h_t
-        h_t = f_prime_t * pre_h + i_prime_t * tilde_h_t  # (batch_size, units)
-
-        return h_t  # (batch_size, units)
     
-    #TODO: implement this correctly
-    def forward_log(self, x_t, pre_h=None):
+
+    def forward(self, x_t, pre_h=None):
         """
         pre_h: (batch_size, units) - previous hidden state (h_prev)
         x_t: (batch_size, input_size) - input at time step t
@@ -70,25 +42,22 @@ class minLSTM(nn.Module):
             pre_h = torch.zeros(x_t.shape[0], 1, self.dim, device=x_t.device)
 
         # Forget gate: log_f_t = log(sigmoid(W_f * x_t))
-        log_f_t = log_g(self.linear_f(x_t))  # (batch_size, units)
+        k_f = self.linear_f(x_t)
+        log_f = -F.softplus(-k_f) # (batch_size, units)
 
-        # Input gate: log_i_t = log(sigmoid(W_i * x_t))
-        log_i_t = log_g(self.linear_i(x_t))  # (batch_size, units)
+        k_i = self.linear_i(x_t)
+        log_i = -F.softplus(-k_i)
+
 
         # Hidden state: log_tilde_h_t = log(W_h * x_t)
-        log_tilde_h_t = log_g(self.linear_h(x_t))  # (batch_size, units)
+        log_tilde_h = log_g(self.linear_h(x_t))  # (batch_size, units)
 
-        # Log normalization of the gates
-        log_sum_f_i = torch.logsumexp(torch.stack([log_f_t, log_i_t], dim=-1), dim=-1)  # (batch_size, units)
-        log_f_prime_t = log_f_t - log_sum_f_i  # log(f_t / (f_t + i_t))
-        log_i_prime_t = log_i_t - log_sum_f_i  # log(i_t / (f_t + i_t))
+        
 
         # Compute the new hidden state using parallel_scan_log
         log_pre_h = log_g(pre_h)  # Convert previous hidden state to log space
-        log_values = torch.cat([log_pre_h, log_i_prime_t + log_tilde_h_t], dim=1)  # Combine contributions
-        log_coefficients = torch.cat([log_f_prime_t, log_i_prime_t], dim=1)  # Log coefficients for scan
-
+        
         # Use parallel_scan_log to compute the hidden state
-        h_t = parallel_scan_log(log_coefficients, log_values)
+        h_t = parallel_scan_log(log_f, torch.cat([log_pre_h, log_i + log_tilde_h], dim=1))
 
         return h_t  # Return the hidden state
