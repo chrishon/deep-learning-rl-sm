@@ -145,7 +145,7 @@ class Trainer:
 
         env = parsed_args["env"]
         dataset = self.dataset  # parsed_args["dataset"]
-        parsed_args["batch_size"] = 16 if dataset == "complete" else 256
+        # parsed_args["batch_size"] = 16 if dataset == "complete" else 256
         if env in ["kitchen", "maze2d", "antmaze"]:
             parsed_args["num_eval_ep"] = 100
         # TODO set data path
@@ -158,7 +158,13 @@ class Trainer:
             shuffle=True,
 
         )
+        # TODO iterate data ret batch size 128 or [104 (rarely)] make so only 128!(shouldn't massively effect training)
         iterate_data = iter(data_loader)
+        # data_test = next(iterate_data)
+        """for i, tens in enumerate(data_test):
+            print("data batch shape:")
+            print(next(iterate_data)[i].shape)
+        print()"""
         # TODO implement get_state_stats for our envs???
         # state_mean, state_std = dataset.get_state_stats()
 
