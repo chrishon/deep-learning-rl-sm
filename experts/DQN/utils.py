@@ -4,15 +4,7 @@ import random
 from PIL import Image
 
 Transition = namedtuple('Transition',
-                        ('state', 'state_additional', 'action', 'time', 'done', 'next_state',
-                         'next_state_additional', 'reward'))
-
-
-class resizer:
-    def __init__(self, width_and_height_size):
-        self.resize = T.Compose([T.ToPILImage(),
-                                 T.Resize(width_and_height_size, interpolation=Image.CUBIC),
-                                 T.ToTensor()])
+                        ('state', 'action', 'done', 'next_state', 'reward'))
 
 
 class ReplayMemory(object):

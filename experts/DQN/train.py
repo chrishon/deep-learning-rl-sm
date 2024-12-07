@@ -3,9 +3,41 @@ import numpy as np
 import pandas as p
 import argparse
 import time
-from utils import ReplayMemory, Transition, resizer
+from utils import ReplayMemory, Transition
 from experts.DQN.DQN import DQN
 from deep_learning_rl_sm.environments.connect_four import ConnectFour
+
+
+def agent_loop(agent, current_state, Replay_memory, adv=False):
+    # Select and perform an action
+    current_state = torch.tensor(current_state)
+    action = agent.select_action(current_state, num_passes)
+    action = action.squeeze()
+    next_state, reward, done, time_restriction, _ = env.step(action)
+
+    # convert to tensors
+    done_mask = torch.Tensor([done])
+    reward = torch.tensor(reward, dtype=torch.float32)
+    next_state = torch.tensor(next_state)
+
+    # flip reward for adversary
+    reward = -1.0 * reward if adv else reward
+
+    # Store the transition in memory
+    Replay_memory.push(current_state, action, done_mask, next_state, reward)
+
+    # Perform one step of the optimization (on the policy network/s)
+    if len(Replay_memory) >= args.BATCH_SIZE:
+        transitions = Replay_memory.sample(args.BATCH_SIZE)
+        batch = Transition(*zip(*transitions))
+        agent.update(batch)
+
+    if num_passes % (2 * args.target_update) == 0:
+        # hard update
+        agent.target_net.load_state_dict(agent.policy_net.state_dict())
+
+    return next_state, done
+
 
 if __name__ == "__main__":
 
@@ -35,13 +67,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # TODO if enough time replace hard update with soft update
 
-    memory = ReplayMemory(args.mem_size)
+    memory_agent = ReplayMemory(args.mem_size)
+    memory_adv = ReplayMemory(args.mem_size)
+
     env = ConnectFour()
     # TODO everything from here on needs to be changed potentially
-    agent_dqn = DQN(args.BATCH_SIZE, args.width, args.height, args.gamma, args.eps_start, args.eps_end, args.eps_decay,
-                    args.num_planners)
-
-    resizer = resizer(args.width)  # args.width should equal args.height -> i.e square
+    agent_dqn = DQN(args.BATCH_SIZE, args.gamma, args.eps_start, args.eps_end, args.eps_decay)
+    adversary_dqn = DQN(args.BATCH_SIZE, args.gamma, args.eps_start, args.eps_end, args.eps_decay)
 
     episodeList = []
     averageRewardList = []
@@ -50,61 +82,23 @@ if __name__ == "__main__":
     max_average_reward = float("-inf")
 
     # TRAINING
-    while time.time() < args.timeout:
+    while i_episode < args.num_games:
         print("episode " + str(i_episode))
-        # obs is a dict
-        obs, _ = env.reset()
-        task_img = torch.from_numpy(obs.get('task_img'))
-        img = resizer.resize(task_img)
-        state = img.unsqueeze(0)
-        state_additional = torch.cat((torch.tensor(env.max_time_executed, dtype=torch.float32),
-                                      torch.tensor(env.consecutive_time_running, dtype=torch.float32),
-                                      torch.tensor([env.time_left], dtype=torch.float32)))
+        state, _ = env.reset()
         final_state = False
-        time_restriction = False
-        while not final_state and not time_restriction:
+        while not final_state:
             num_passes += 1
-            # Select and perform an action
-            action = agent_dqn.select_action(state, torch.unsqueeze(state_additional, dim=0), num_passes)
-            actionTime = torch.tensor([100])
-            action = action.squeeze(0)
-            env_action = np.concatenate(
-                ((np.array(action.detach())), np.array(actionTime.detach())))
-            obs, reward, final_state, time_restriction, _ = env.step(env_action)
-            print("action number: ", action)
-            print(reward)
-            print(final_state)
-            print(time_restriction)
-            next_state = state
-            next_state_additional = torch.tensor(obs.get('task_additional'), dtype=torch.float32)
-            mask = torch.Tensor([final_state])
-            reward = torch.tensor(reward, dtype=torch.float32)
-
-            # Store the transition in memory
-            memory.push(state, state_additional, env.task_idx, action, actionTime, mask, next_state,
-                        next_state_additional, reward)
-
-            # Move to the next state
-            state = next_state
-            state_additional = next_state_additional
-            # Perform one step of the optimization (on the policy network/s)
-            if len(memory) >= args.BATCH_SIZE:
-                transitions = memory.sample(args.BATCH_SIZE)
-                batch = Transition(*zip(*transitions))
-                agent_dqn.update(batch)
-
-            if num_passes % args.target_update == 0:
-                # hard update
-                agent_dqn.target_net.load_state_dict(agent_dqn.policy_net.state_dict())
+            if num_passes % 2 == 1:
+                state, final_state = agent_loop(agent_dqn, state, memory_agent, adv=False)
+            else:
+                state, final_state = agent_loop(adversary_dqn, state, memory_adv, adv=True)
 
         if i_episode % args.EVALUATE == 0:
-            if len(memory) >= args.BATCH_SIZE:
+            if len(memory_agent) >= args.BATCH_SIZE:
                 print("testing network...")
                 # TODO plot a random game here to approx. view progress
-                if max_average_reward < averageRewardList[-1]:
-                    max_average_reward = averageRewardList[-1]
-                    torch.save(agent_dqn.policy_net.state_dict(), "net_configs/dqn.pth")
 
+                # torch.save(agent_dqn.policy_net.state_dict(), "net_configs/dqn.pth")
         i_episode += 1
 
     print('Completed training...')
