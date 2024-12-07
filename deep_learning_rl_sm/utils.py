@@ -33,6 +33,7 @@ def generate_data(batch_size=1000):
     # [1,2,3,4,...] so 0 can be used as a padding index
     time_steps = [time_step_tensor + 1 for time_step_tensor in time_steps]
 
+    # TODO is this padding scheme viable?
     # PADDING PARAMETERS
     padded_state = torch.full((22, 42), -100)  # Padding value for states
     padded_mask = torch.full((21, 7), -100)  # Padding for mask
