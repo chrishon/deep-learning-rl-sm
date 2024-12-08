@@ -58,7 +58,7 @@ target_entropy = -np.log(np.prod(env.action_dim)) if discrete else -np.prod(env.
 args = vars(args)
 model = MinimalReinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],min_rnn=args["min_rnn"],
                           h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
-                          drop_p=args["dropout_p"], init_tmp=args["init_temperature"],
+                          drop_p=args["dropout_p"], init_tmp=args["init_temperature"],discrete=args["env_discrete"],
                           target_entropy=target_entropy)
 optimizer = Lamb(
             model.parameters(),
