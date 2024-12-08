@@ -42,13 +42,15 @@ class DQN(object):
 
         state_batch = torch.cat(transition_batch.state).to(device)
         action_batch = torch.stack(transition_batch.action).to(device)
+        action_mask_batch = torch.cat(transition_batch.action_mask).to(device)
         reward_batch = torch.stack(transition_batch.reward).to(device)
         done_batch = torch.cat(transition_batch.done).to(device)
         next_state_batch = torch.cat(transition_batch.next_state).to(device)
+        nxt_action_mask_batch = torch.cat(transition_batch.next_action_mask).to(device)
 
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
+        state_action_values = self.policy_net(state_batch, action_mask_batch).gather(1, action_batch)
 
-        next_state_values = self.target_net(next_state_batch).max(1)[0].detach()
+        next_state_values = self.target_net(next_state_batch, nxt_action_mask_batch).max(1)[0].detach()
 
         # Compute the expected Q values
         expected_state_action_values = (1 - done_batch) * next_state_values * self.GAMMA + reward_batch
