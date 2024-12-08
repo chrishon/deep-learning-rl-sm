@@ -13,4 +13,5 @@ class DQN_net(nn.Module):
 
     def forward(self, state, mask=None):
         action_vec = self.net(state)
+        print("action_vec: " + str(action_vec))
         return torch.softmax(action_vec, dim=-1) if mask is None else torch.softmax(action_vec + mask, dim=-1)

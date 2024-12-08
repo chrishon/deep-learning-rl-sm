@@ -76,6 +76,7 @@ class DQN(object):
             mask = torch.tensor([-torch.inf if entry == 0 else 0 for entry in action_mask])
             with torch.no_grad():
                 action_vector = self.policy_net(state, mask)
+                print("SM_vec: " + str(action_vector))
                 return torch.argmax(action_vector, dim=-1).unsqueeze(-1)
         else:
             # valid action indices
