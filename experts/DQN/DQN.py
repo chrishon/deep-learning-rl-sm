@@ -49,8 +49,8 @@ class DQN(object):
         nxt_action_mask_batch = torch.cat(transition_batch.next_action_mask).to(device)
 
         # adjust masks for softmax
-        action_mask_batch = torch.where(action_mask_batch == 1, 0, -torch.inf)
-        nxt_action_mask_batch = torch.where(nxt_action_mask_batch == 1, 0, -torch.inf)
+        action_mask_batch = torch.where(action_mask_batch == 1, 0, -1e9)
+        nxt_action_mask_batch = torch.where(nxt_action_mask_batch == 1, 0, -1e9)
 
         # get Q-values
         state_action_values = self.policy_net(state_batch, action_mask_batch).gather(1, action_batch)
@@ -65,6 +65,7 @@ class DQN(object):
         # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
+        # torch.nn.utils.clip_grad_norm(self.policy_net.parameters(), max_norm=10.0)
         self.optimizer.step()
 
     def select_action(self, state, steps_done, action_mask):
@@ -73,10 +74,10 @@ class DQN(object):
         # linear decay
         eps_threshold = self.EPS_START - (self.EPS_START - self.EPS_END) * min(steps_done / self.EPS_DECAY, 1.0)
         if sample > eps_threshold:
-            mask = torch.tensor([-torch.inf if entry == 0 else 0 for entry in action_mask])
+            mask = torch.tensor([-1e9 if entry == 0 else 0 for entry in action_mask])
             with torch.no_grad():
                 action_vector = self.policy_net(state, mask)
-                print("SM_vec: " + str(action_vector))
+                # print("SM_vec: " + str(action_vector))
                 return torch.argmax(action_vector, dim=-1).unsqueeze(-1)
         else:
             # valid action indices

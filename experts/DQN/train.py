@@ -1,8 +1,6 @@
 import torch
 import numpy as np
-import pandas as p
 import argparse
-import time
 from utils import ReplayMemory, Transition
 from experts.DQN.DQN import DQN
 from deep_learning_rl_sm.environments.connect_four import ConnectFour
@@ -17,9 +15,8 @@ def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
 
     # TODO change Connect-4 env to be 2-player
     # TODO fix nan problem in masking
-    print(environment.action_mask)
-    print(action)
-    print()
+    """print(environment.action_mask)
+    print(action)"""
     next_state, reward, done, time_restriction, _ = environment.step(action)
     next_action_mask = torch.tensor(environment.action_mask).unsqueeze(0)
 
@@ -58,7 +55,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--BATCH_SIZE", default=64, type=int,
                         help="Size of the batch used in training to update the networks(default: 32)")
-    parser.add_argument("--num_games", default=1000, type=int,
+    parser.add_argument("--num_games", default=10000, type=int,
                         help="Num. of total timesteps of training (default: 3000)")
     parser.add_argument("--gamma", default=0.99,
                         help="Discount factor (default: 0.99)")
