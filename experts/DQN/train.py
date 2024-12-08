@@ -8,7 +8,7 @@ from experts.DQN.DQN import DQN
 from deep_learning_rl_sm.environments.connect_four import ConnectFour
 
 
-def agent_loop(agent, current_state, Replay_memory, action_mask,  adv=False):
+def agent_loop(agent, current_state, Replay_memory, action_mask, adv=False):
     # Select and perform an action
     current_state = torch.flatten(torch.tensor(current_state, dtype=torch.float32))
     action = agent.select_action(current_state, num_passes, action_mask)
@@ -21,13 +21,13 @@ def agent_loop(agent, current_state, Replay_memory, action_mask,  adv=False):
     # convert to tensors
     done_mask = torch.Tensor([done])
     reward = torch.tensor(reward, dtype=torch.float32)
-    next_state = torch.tensor(next_state)
 
     # flip reward for adversary
     reward = -1.0 * reward if adv else reward
 
     # Store the transition in memory
-    Replay_memory.push(current_state, action, done_mask, next_state, reward)
+    Replay_memory.push(current_state.unsqueeze(0), action.unsqueeze(0), done_mask.unsqueeze(0),
+                       torch.flatten(torch.tensor(next_state, dtype=torch.float32)).unsqueeze(0), reward.unsqueeze(0))
 
     # Perform one step of the optimization (on the policy network/s)
     if len(Replay_memory) >= args.BATCH_SIZE:

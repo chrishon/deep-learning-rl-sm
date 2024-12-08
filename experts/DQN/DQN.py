@@ -39,15 +39,15 @@ class DQN(object):
     def update(self, transition_batch):
         # TODO save action masks to replay buffer
         self.set_train()
+
         state_batch = torch.cat(transition_batch.state).to(device)
         action_batch = torch.stack(transition_batch.action).to(device)
-        reward_batch = torch.cat(transition_batch.reward_planner).to(device)
+        reward_batch = torch.stack(transition_batch.reward).to(device)
         done_batch = torch.cat(transition_batch.done).to(device)
         next_state_batch = torch.cat(transition_batch.next_state).to(device)
 
         state_action_values = self.policy_net(state_batch).gather(1, action_batch)
 
-        # TODO use argmax
         next_state_values = self.target_net(next_state_batch).max(1)[0].detach()
 
         # Compute the expected Q values
