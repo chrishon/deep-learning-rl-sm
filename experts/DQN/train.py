@@ -10,9 +10,12 @@ from deep_learning_rl_sm.environments.connect_four import ConnectFour
 
 def agent_loop(agent, current_state, Replay_memory, adv=False):
     # Select and perform an action
-    current_state = torch.tensor(current_state)
+    current_state = torch.flatten(torch.tensor(current_state, dtype=torch.float32))
     action = agent.select_action(current_state, num_passes)
     action = action.squeeze()
+
+    # TODO change Connect-4 env to be 2-player
+    # TODO get action mask and use to mask invalid actions
     next_state, reward, done, time_restriction, _ = env.step(action)
 
     # convert to tensors
@@ -65,13 +68,14 @@ if __name__ == "__main__":
     parser.add_argument("--target_update", default=20, type=int,
                         help="number of iterations before dqn_target is receives hard update")
     args = parser.parse_args()
-    # TODO if enough time replace hard update with soft update
+    # TODO if enough time:
+    #  .replace hard update with soft update
+    #  .double DQN
 
     memory_agent = ReplayMemory(args.mem_size)
     memory_adv = ReplayMemory(args.mem_size)
 
     env = ConnectFour()
-    # TODO everything from here on needs to be changed potentially
     agent_dqn = DQN(args.BATCH_SIZE, args.gamma, args.eps_start, args.eps_end, args.eps_decay)
     adversary_dqn = DQN(args.BATCH_SIZE, args.gamma, args.eps_start, args.eps_end, args.eps_decay)
 
@@ -97,8 +101,8 @@ if __name__ == "__main__":
             if len(memory_agent) >= args.BATCH_SIZE:
                 print("testing network...")
                 # TODO plot a random game here to approx. view progress
-
-                # torch.save(agent_dqn.policy_net.state_dict(), "net_configs/dqn.pth")
         i_episode += 1
 
     print('Completed training...')
+
+    # torch.save(agent_dqn.policy_net.state_dict(), "net_configs/dqn.pth")

@@ -64,6 +64,7 @@ class DQN(object):
         self.optimizer.step()
 
     def select_action(self, state, steps_done):
+        # TODO action masking!
         sample = random.random()
         # linear decay
         eps_threshold = self.EPS_START - (self.EPS_START - self.EPS_END) * min(steps_done / self.EPS_DECAY, 1.0)
@@ -72,7 +73,7 @@ class DQN(object):
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was found
                 action_vector = self.policy_net(state)
-                return action_vector.max(1)[1].view(1, 1)
+                return torch.argmax(action_vector, dim=-1).unsqueeze(-1)
         else:
             actionNo = torch.tensor([[random.randrange(self.n_actions)]], device=device)
             return actionNo
