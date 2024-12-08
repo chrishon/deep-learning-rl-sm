@@ -37,31 +37,35 @@ class DQN(object):
         self.target_net.train()
 
     def update(self, transition_batch):
-        # TODO
+        # TODO save action masks to replay buffer
         self.set_train()
+
         state_batch = torch.cat(transition_batch.state).to(device)
-        state_additional_batch = torch.stack(transition_batch.state_additional).to(device)
         action_batch = torch.stack(transition_batch.action).to(device)
-        # time_batch = torch.stack(transition_batch.time).to(device)
-        reward_batch = torch.cat(transition_batch.reward_planner).to(device)
+        action_mask_batch = torch.cat(transition_batch.action_mask).to(device)
+        reward_batch = torch.stack(transition_batch.reward).to(device)
         done_batch = torch.cat(transition_batch.done).to(device)
         next_state_batch = torch.cat(transition_batch.next_state).to(device)
-        next_state_additional_batch = torch.stack(transition_batch.next_state_additional).to(device)
+        nxt_action_mask_batch = torch.cat(transition_batch.next_action_mask).to(device)
 
-        # nn_output_vectors = self.policy_net(state_batch, state_additional_batch)
-        state_action_values = self.policy_net(state_batch, state_additional_batch).gather(1, action_batch)
+        # adjust masks for softmax
+        action_mask_batch = torch.where(action_mask_batch == 1, 0, -1e9)
+        nxt_action_mask_batch = torch.where(nxt_action_mask_batch == 1, 0, -1e9)
 
-        next_state_values = self.target_net(next_state_batch, next_state_additional_batch).max(1)[0].detach()
+        # get Q-values
+        state_action_values = self.policy_net(state_batch, action_mask_batch).gather(1, action_batch)
+        next_state_values = self.target_net(next_state_batch, nxt_action_mask_batch).max(1)[0].detach()
 
         # Compute the expected Q values
         expected_state_action_values = (1 - done_batch) * next_state_values * self.GAMMA + reward_batch
         expected_state_action_values = expected_state_action_values.unsqueeze(1)  # change shape for loss
 
-        # Compute Huber loss
-        loss_p = F.mse_loss(state_action_values, expected_state_action_values)
+        # Compute MSE loss
+        loss = F.mse_loss(state_action_values, expected_state_action_values)
         # Optimize the model
         self.optimizer.zero_grad()
-        loss_p.backward()
+        loss.backward()
+        # torch.nn.utils.clip_grad_norm(self.policy_net.parameters(), max_norm=10.0)
         self.optimizer.step()
 
     def select_action(self, state, steps_done, action_mask):
@@ -70,14 +74,17 @@ class DQN(object):
         # linear decay
         eps_threshold = self.EPS_START - (self.EPS_START - self.EPS_END) * min(steps_done / self.EPS_DECAY, 1.0)
         if sample > eps_threshold:
-            mask = torch.tensor([-torch.inf if entry == 0 else 0 for entry in action_mask])
+            mask = torch.tensor([-1e9 if entry == 0 else 0 for entry in action_mask])
             with torch.no_grad():
                 action_vector = self.policy_net(state, mask)
+                # print("SM_vec: " + str(action_vector))
                 return torch.argmax(action_vector, dim=-1).unsqueeze(-1)
         else:
-            mask = [not entry for entry in action_mask]
-            actionNo = torch.tensor([[random.randrange(self.n_actions - sum(mask))]], device=device)
-            actionNo += sum(mask[:actionNo + 1])
+            # valid action indices
+            indices = [index for index, val in enumerate(action_mask) if val == 1]
+            num_actions = self.n_actions - (7 - sum(action_mask))
+            actionNo = random.randrange(num_actions)
+            actionNo = torch.tensor([[indices[actionNo]]], device=device)
             return actionNo
 
     @staticmethod

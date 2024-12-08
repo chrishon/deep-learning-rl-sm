@@ -1,33 +1,36 @@
 import torch
 import numpy as np
-import pandas as p
 import argparse
-import time
 from utils import ReplayMemory, Transition
 from experts.DQN.DQN import DQN
 from deep_learning_rl_sm.environments.connect_four import ConnectFour
 
 
-def agent_loop(agent, current_state, Replay_memory, action_mask,  adv=False):
+def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
     # Select and perform an action
     current_state = torch.flatten(torch.tensor(current_state, dtype=torch.float32))
-    action = agent.select_action(current_state, num_passes, action_mask)
+    action = agent.select_action(current_state, num_passes, environment.action_mask)
+    action_mask = torch.tensor(environment.action_mask).unsqueeze(0)
     action = action.squeeze()
 
     # TODO change Connect-4 env to be 2-player
-    # TODO get action mask and use to mask invalid actions
-    next_state, reward, done, time_restriction, _ = env.step(action)
+    # TODO fix nan problem in masking
+    """print(environment.action_mask)
+    print(action)"""
+    next_state, reward, done, time_restriction, _ = environment.step(action)
+    next_action_mask = torch.tensor(environment.action_mask).unsqueeze(0)
 
     # convert to tensors
     done_mask = torch.Tensor([done])
     reward = torch.tensor(reward, dtype=torch.float32)
-    next_state = torch.tensor(next_state)
 
     # flip reward for adversary
     reward = -1.0 * reward if adv else reward
 
     # Store the transition in memory
-    Replay_memory.push(current_state, action, done_mask, next_state, reward)
+    Replay_memory.push(current_state.unsqueeze(0), action.unsqueeze(0), action_mask, done_mask.unsqueeze(0),
+                       torch.flatten(torch.tensor(next_state, dtype=torch.float32)).unsqueeze(0), next_action_mask,
+                       reward.unsqueeze(0))
 
     # Perform one step of the optimization (on the policy network/s)
     if len(Replay_memory) >= args.BATCH_SIZE:
@@ -42,12 +45,17 @@ def agent_loop(agent, current_state, Replay_memory, action_mask,  adv=False):
     return next_state, done
 
 
+def simulate_env():
+    # TODO for testing
+    return None
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--BATCH_SIZE", default=64, type=int,
                         help="Size of the batch used in training to update the networks(default: 32)")
-    parser.add_argument("--num_games", default=1000, type=int,
+    parser.add_argument("--num_games", default=10000, type=int,
                         help="Num. of total timesteps of training (default: 3000)")
     parser.add_argument("--gamma", default=0.99,
                         help="Discount factor (default: 0.99)")
@@ -93,14 +101,14 @@ if __name__ == "__main__":
         while not final_state:
             num_passes += 1
             if num_passes % 2 == 1:
-                state, final_state = agent_loop(agent_dqn, state, memory_agent, env.action_mask, adv=False)
+                state, final_state = agent_loop(agent_dqn, state, memory_agent, env, adv=False)
             else:
-                state, final_state = agent_loop(adversary_dqn, state, memory_adv, env.action_mask, adv=True)
+                state, final_state = agent_loop(adversary_dqn, state, memory_adv, env, adv=True)
 
         if i_episode % args.EVALUATE == 0:
             if len(memory_agent) >= args.BATCH_SIZE:
                 print("testing network...")
-                # TODO plot a random game here to approx. view progress
+
         i_episode += 1
 
     print('Completed training...')

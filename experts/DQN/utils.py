@@ -4,7 +4,7 @@ import random
 from PIL import Image
 
 Transition = namedtuple('Transition',
-                        ('state', 'action', 'done', 'next_state', 'reward'))
+                        ('state', 'action', 'action_mask', 'done', 'next_state', 'next_action_mask', 'reward'))
 
 
 class ReplayMemory(object):
