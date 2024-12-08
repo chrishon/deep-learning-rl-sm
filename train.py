@@ -17,6 +17,7 @@ env = connect_four.ConnectFour()
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_type", choices=["reinformer"], default="reinformer")
 parser.add_argument("--env", type=str, default=env)
+parser.add_argument("--env_discrete", type=bool, default=True)
 parser.add_argument("--dataset", type=str, default="medium")
 parser.add_argument("--num_eval_ep", type=int, default=10)
 parser.add_argument("--max_eval_ep_len", type=int, default=1000)
@@ -66,9 +67,9 @@ optimizer = Lamb(
             eps=args["eps"],
         )
 scheduler = torch.optim.lr_scheduler.LambdaLR(
-            optimizer,
-            lambda steps: min((steps + 1) / args["warmup_steps"], 1)
-        )
+    optimizer,
+    lambda steps: min((steps + 1) / args["warmup_steps"], 1)
+)
 
 datapath = "data/offline_data.pt"
 dataset = CustomDataset(datapath)

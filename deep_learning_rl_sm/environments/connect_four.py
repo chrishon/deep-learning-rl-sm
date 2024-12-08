@@ -34,6 +34,8 @@ class ConnectFour(OurEnv):
         self.action_dim = 1
         self.state_dim = np.shape(self._curr_state)
 
+        self.max_two_p_game_length = 21
+
         """self.adv_action_list_for_test = [1, 2, 2, 3, 3, 3]
         self.adv_test_action_idx = 0"""  # for testing
 
