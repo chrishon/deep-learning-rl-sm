@@ -8,10 +8,10 @@ from experts.DQN.DQN import DQN
 from deep_learning_rl_sm.environments.connect_four import ConnectFour
 
 
-def agent_loop(agent, current_state, Replay_memory, adv=False):
+def agent_loop(agent, current_state, Replay_memory, action_mask,  adv=False):
     # Select and perform an action
     current_state = torch.flatten(torch.tensor(current_state, dtype=torch.float32))
-    action = agent.select_action(current_state, num_passes)
+    action = agent.select_action(current_state, num_passes, action_mask)
     action = action.squeeze()
 
     # TODO change Connect-4 env to be 2-player
@@ -93,9 +93,9 @@ if __name__ == "__main__":
         while not final_state:
             num_passes += 1
             if num_passes % 2 == 1:
-                state, final_state = agent_loop(agent_dqn, state, memory_agent, adv=False)
+                state, final_state = agent_loop(agent_dqn, state, memory_agent, env.action_mask, adv=False)
             else:
-                state, final_state = agent_loop(adversary_dqn, state, memory_adv, adv=True)
+                state, final_state = agent_loop(adversary_dqn, state, memory_adv, env.action_mask, adv=True)
 
         if i_episode % args.EVALUATE == 0:
             if len(memory_agent) >= args.BATCH_SIZE:

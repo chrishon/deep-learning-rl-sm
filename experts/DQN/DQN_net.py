@@ -11,6 +11,6 @@ class DQN_net(nn.Module):
         self.net = nn.Sequential(nn.Linear(in_size, 128), nn.ReLU(), nn.Linear(128, 128), nn.ReLU(),
                                  nn.Linear(128, 128), nn.ReLU(), nn.Linear(128, output_size))
 
-    def forward(self, state):
+    def forward(self, state, mask=None):
         action_vec = self.net(state)
-        return torch.softmax(action_vec, dim=-1)
+        return torch.softmax(action_vec, dim=-1) if mask is None else torch.softmax(action_vec + mask, dim=-1)

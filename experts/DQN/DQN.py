@@ -37,6 +37,7 @@ class DQN(object):
         self.target_net.train()
 
     def update(self, transition_batch):
+        # TODO
         self.set_train()
         state_batch = torch.cat(transition_batch.state).to(device)
         state_additional_batch = torch.stack(transition_batch.state_additional).to(device)
@@ -63,19 +64,20 @@ class DQN(object):
         loss_p.backward()
         self.optimizer.step()
 
-    def select_action(self, state, steps_done):
-        # TODO action masking!
+    def select_action(self, state, steps_done, action_mask):
+        # action_mask contains 1s for all valid actions
         sample = random.random()
         # linear decay
         eps_threshold = self.EPS_START - (self.EPS_START - self.EPS_END) * min(steps_done / self.EPS_DECAY, 1.0)
         if sample > eps_threshold:
+            mask = torch.tensor([-torch.inf if entry == 0 else 0 for entry in action_mask])
             with torch.no_grad():
-                # t.max(1) will return largest column value of each row.
-                # second column on max result is index of where max element was found
-                action_vector = self.policy_net(state)
+                action_vector = self.policy_net(state, mask)
                 return torch.argmax(action_vector, dim=-1).unsqueeze(-1)
         else:
-            actionNo = torch.tensor([[random.randrange(self.n_actions)]], device=device)
+            mask = [not entry for entry in action_mask]
+            actionNo = torch.tensor([[random.randrange(self.n_actions - sum(mask))]], device=device)
+            actionNo += sum(mask[:actionNo + 1])
             return actionNo
 
     @staticmethod
