@@ -44,6 +44,11 @@ def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
     return next_state, done
 
 
+def simulate_env():
+    # TODO for testing
+    return None
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -102,7 +107,7 @@ if __name__ == "__main__":
         if i_episode % args.EVALUATE == 0:
             if len(memory_agent) >= args.BATCH_SIZE:
                 print("testing network...")
-                # TODO plot a random game here to approx. view progress
+
         i_episode += 1
 
     print('Completed training...')

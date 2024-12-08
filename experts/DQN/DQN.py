@@ -48,8 +48,12 @@ class DQN(object):
         next_state_batch = torch.cat(transition_batch.next_state).to(device)
         nxt_action_mask_batch = torch.cat(transition_batch.next_action_mask).to(device)
 
-        state_action_values = self.policy_net(state_batch, action_mask_batch).gather(1, action_batch)
+        # adjust masks for softmax
+        action_mask_batch = torch.where(action_mask_batch == 1, 0, -torch.inf)
+        nxt_action_mask_batch = torch.where(nxt_action_mask_batch == 1, 0, -torch.inf)
 
+        # get Q-values
+        state_action_values = self.policy_net(state_batch, action_mask_batch).gather(1, action_batch)
         next_state_values = self.target_net(next_state_batch, nxt_action_mask_batch).max(1)[0].detach()
 
         # Compute the expected Q values
