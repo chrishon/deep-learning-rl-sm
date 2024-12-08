@@ -16,6 +16,7 @@ class ConnectFour(OurEnv):
         # The size of the square grid
         self.width = width
         self.length = length
+        self.max_two_p_game_length = self.width * self.length
 
         # Define the agent and target location; randomly chosen in `reset` and updated in `step`
         self._curr_state = np.zeros((self.length, self.width))

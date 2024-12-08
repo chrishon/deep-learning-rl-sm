@@ -33,6 +33,54 @@ class Trainer:
             betas=[0.9, 0.999],
         )
 
+    def evaluate_online(self, env):
+        ratio = 0
+        for _ in range(50):
+            # states vector is 1 timestep larger because of init state
+            # flatten board state
+            s0 = torch.flatten(torch.tensor(env.reset()[0]))
+            print("s0 shape: " + str(s0.shape[0]))
+            states = torch.zeros((1, 21, s0.shape[0]))
+            states[0, 0] = s0  # (B=1, T=1, State)
+            timesteps = torch.tensor([i for i in range(21)]) + 1  # remember 0 is used for padding
+            timesteps = timesteps.unsqueeze(0)
+            actions = torch.full((21, 1), 0)
+            returns_to_go = torch.full((21, 1), -100)
+
+            states = states.float()
+            timesteps = timesteps
+            actions = actions.float()
+            returns_to_go = returns_to_go.float()
+            print(f"Timestep online Shape: {timesteps.shape}")
+            print(f"states online Shape: {states.shape}")
+            print(f"actions online Shape: {actions.shape}")
+            print(f"returns_to_go online Shape: {returns_to_go.shape}")
+            while True:
+
+                (
+                    returns_to_go_preds,
+                    actions_dist_preds,
+                    _,
+                ) = self.model.forward(
+                    timesteps=timesteps,
+                    states=states,
+                    actions=actions,
+                    returns_to_go=returns_to_go,
+                )
+                for timestep in timesteps:
+                    print("Action distr ", actions_dist_preds)
+                    print(actions_dist_preds.mean)
+                    mean_action = actions_dist_preds.mean
+                    print("Mean actionshape: ", mean_action.shape)
+                    print("Mean action: ", mean_action[0,0,0])
+                    state, reward, done, _, _ = env.step(1) #TODO
+                    ratio += reward if reward == 1 else 0
+                    if done:
+                        break
+        ratio /= 50
+
+        return ratio
+
     def train_step(
             self,
             timesteps,
@@ -52,6 +100,10 @@ class Trainer:
         returns_to_go = returns_to_go.to(self.device).unsqueeze(
             dim=-1
         )  # B x T x 1
+        print(f"Timestep Shape: {timesteps.shape}")
+        print(f"states Shape: {states.shape}")
+        print(f"actions Shape: {actions.shape}")
+        print(f"returns_to_go Shape: {returns_to_go.shape}")
         returns_to_go = returns_to_go.float()
         min_timestep = timesteps.min()
         max_timestep = timesteps.max()
@@ -72,6 +124,7 @@ class Trainer:
             actions=actions,
             returns_to_go=returns_to_go,
         )
+        print("States shape:", states.shape)
 
         returns_to_go_target = torch.clone(returns_to_go).view(
             -1, 1
@@ -147,6 +200,7 @@ class Trainer:
 
         )
         iterate_data = iter(data_loader)
+        
         # TODO implement get_state_stats for our envs???
         # state_mean, state_std = dataset.get_state_stats()
 
@@ -163,6 +217,8 @@ class Trainer:
         for _ in range(1, max_train_iters + 1):
             for epoch in range(num_updates_per_iter):
                 print(epoch)
+                if (epoch+1) % 10 == 0:
+                    self.evaluate_online(env=env)
 
                 try:
                     print("Trying to get batch")
