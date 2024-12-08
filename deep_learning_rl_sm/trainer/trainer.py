@@ -107,6 +107,7 @@ class Trainer:
         returns_to_go = returns_to_go.float()
         min_timestep = timesteps.min()
         max_timestep = timesteps.max()
+        print(f"Min timestep: {min_timestep}, Max timestep: {max_timestep}")
         rewards = rewards.to(self.device).unsqueeze(
             dim=-1
         )  # B x T x 1
@@ -129,7 +130,7 @@ class Trainer:
             -1, 1
         )[
             (traj_mask.view(-1, ) == 0) | (traj_mask.view(-1, ) == 1)
-            ]
+        ]
         returns_to_go_preds = returns_to_go_preds.view(-1, 1)[
             (traj_mask.view(-1, ) == 0) | (traj_mask.view(-1, ) == 1)
             ]
@@ -142,33 +143,20 @@ class Trainer:
                 self.tau - (u < 0).float()
             ) * u ** 2
         )
-
-        # TODO this section will likely throw errors when dealing with non discrete envs like in D4RL.
-        #  Taking a look at previous implementation or original Reinformer code will help you
-        #  to make adjustments to D4RL Rasmus!!!
-        #  (we have a categorical dist output from the actor net, chosen by setting arg in parseargs to discrete)
         # action_loss ------------------------------------------------
-        # cannot calculate logprobs of out of dist actions need to fill with viable value for padding and then mask to 0
         actions_target = torch.clone(actions)
-        mask = actions_target != -100  # padding for actions is -100 (better padding scheme probably necessary)
-        actions_target_4logprob = actions_target.clone()
-        actions_target_4logprob[~mask] = 0
-        actions_target_4logprob = actions_target_4logprob.squeeze()
-
-        log_likelihood = (actions_dist_preds.log_prob(
-            actions_target_4logprob
-        )).unsqueeze(-1) * mask
-        # TODO why is batch dim sometimes 232
-        print(log_likelihood.shape)
-        log_likelihood = log_likelihood.sum(axis=2).view(-1)[
+        print("Action Target shape: ", actions_target.shape)
+        print("traj mask shape: ", traj_mask.shape)
+        log_likelihood = actions_dist_preds.log_prob(
+            actions_target.view(-1)
+        ).sum(axis=2).view(-1)[
             (traj_mask.view(-1) == 0) | (traj_mask.view(-1) == 1)
             ].mean()
-
-        entropy = actions_dist_preds.entropy().unsqueeze(-1).sum(axis=2).mean()
+        entropy = actions_dist_preds.entropy().sum(axis=2).mean()
         action_loss = -(log_likelihood + self.model.temp().detach() * entropy)
 
         loss = returns_to_go_loss + action_loss
-        print("Loss: " + str(loss))
+
         # optimization -----------------------------------------------
         self.optimizer.zero_grad()
         loss.backward()
@@ -198,7 +186,7 @@ class Trainer:
 
         env = parsed_args["env"]
         dataset = self.dataset  # parsed_args["dataset"]
-        # parsed_args["batch_size"] = 16 if dataset == "complete" else 256
+        parsed_args["batch_size"] = 16 if dataset == "complete" else 256
         if env in ["kitchen", "maze2d", "antmaze"]:
             parsed_args["num_eval_ep"] = 100
         # TODO set data path
@@ -211,7 +199,6 @@ class Trainer:
             shuffle=True,
 
         )
-        # TODO iterate data ret batch size 128 or [104 (rarely)] make so only 128!(shouldn't massively effect training)
         iterate_data = iter(data_loader)
         
         # TODO implement get_state_stats for our envs???
@@ -227,8 +214,6 @@ class Trainer:
         max_train_iters = parsed_args["max_train_iters"]
         num_updates_per_iter = parsed_args["num_updates_per_iter"]
         score_list_normalized = []
-
-        num_updates = 0
         for _ in range(1, max_train_iters + 1):
             for epoch in range(num_updates_per_iter):
                 print(epoch)
@@ -274,13 +259,7 @@ class Trainer:
                             "training/loss": loss,
                         }
                     )
-
-                if num_updates % 50 == 0 and num_updates != 0:
-                    win_loss_ratio_test = self.evaluate_online(env=env)
-                    print("win loss ratio: " + str(win_loss_ratio_test))
-                num_updates += 1
-
-            # TODO win_loss_ratio_test instead of normalized score or both?
+            # TODO fill in dataset
             normalized_score = self.evaluate(
                 dataset=None
             )
@@ -301,40 +280,6 @@ class Trainer:
             )
         print(score_list_normalized)
         print("finished training!")
-
-    def evaluate_online(self, env):
-        ratio = 0
-        for _ in range(50):
-            # states vector is 1 timestep larger because of init state
-            # flatten board state
-            s0 = torch.flatten(torch.tensor(env.reset()[0]))
-            print("s0 shape: " + str(s0.shape[0]))
-            states = torch.zeros((1, env.max_two_p_game_length + 1, s0.shape[0]))
-            states[0, 0] = s0  # (B=1, T=1, State)
-            timesteps = torch.tensor([i for i in range(21)]) + 1  # remember 0 is used for padding
-            actions = torch.full((21, 1), -100)
-            returns_to_go = torch.full((21, 1), -100)
-            while True:
-
-                (
-                    returns_to_go_preds,
-                    actions_dist_preds,
-                    _,
-                ) = self.model.forward(
-                    timesteps=timesteps,
-                    states=states,
-                    actions=actions,
-                    returns_to_go=returns_to_go,
-                )
-                print(actions_dist_preds.mean)
-                mean_action = actions_dist_preds.mean
-                state, reward, done, _ = env.step(mean_action)
-                ratio += reward if reward == 1 else 0
-                if done:
-                    break
-        ratio /= 50
-
-        return ratio
 
     def evaluate(self, dataset):
         """Evaluate the model on a given dataset."""
