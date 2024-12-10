@@ -17,15 +17,13 @@ def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
     # TODO fix nan problem in masking
     """print(environment.action_mask)
     print(action)"""
-    next_state, reward, done, time_restriction, _ = environment.step(action)
+    player = 1 if adv is False else 2
+    next_state, reward, done, time_restriction, _ = environment.step_2P(action, player=player)
     next_action_mask = torch.tensor(environment.action_mask).unsqueeze(0)
 
     # convert to tensors
     done_mask = torch.Tensor([done])
     reward = torch.tensor(reward, dtype=torch.float32)
-
-    # flip reward for adversary
-    reward = -1.0 * reward if adv else reward
 
     # Store the transition in memory
     Replay_memory.push(current_state.unsqueeze(0), action.unsqueeze(0), action_mask, done_mask.unsqueeze(0),
