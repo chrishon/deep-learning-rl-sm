@@ -16,7 +16,6 @@ class ConnectFour(OurEnv):
         # The size of the square grid
         self.width = width
         self.length = length
-        self.max_two_p_game_length = self.width * self.length
 
         # Define the agent and target location; randomly chosen in `reset` and updated in `step`
         self._curr_state = np.zeros((self.length, self.width))
@@ -48,7 +47,7 @@ class ConnectFour(OurEnv):
 
         self._curr_state = np.zeros((self.length, self.width))
         self.action_mask = np.array([True for _ in range(7)], dtype=np.int8)
-        obs = self._get_obs()
+        obs = self._curr_state
         inf = _get_info()  # info not used yet (not sure if we need this tbh)
 
         return obs, inf
@@ -110,8 +109,6 @@ class ConnectFour(OurEnv):
             # adv move
             mask = np.array([1 if self._curr_state[0, i] == 0 else 0 for i in range(self.no_actions)], dtype=np.int8)
             adv_action = self.action_space.sample(mask=mask)
-            """adv_action = self.adv_action_list_for_test[self.adv_test_action_idx] 
-            self.adv_test_action_idx += 1"""  # for testing
             adv_insert_row = np.where(self._curr_state[:, adv_action] == 0)[0][-1]
             self._curr_state[adv_insert_row, adv_action] = 2  # player indicates its pieces by a 2
 
@@ -125,8 +122,8 @@ class ConnectFour(OurEnv):
         term = is_full or player_winner or adv_winner
         trunc = False  # don't think we need this for this game
         # (truncated is a condition for early stopping without a terminal state being reached)
-        rew = 1 if (term and player_winner) else -1 if (term and adv_winner) else 0
-        obs = self._get_obs()
+        rew = 1 if player_winner else -1 if adv_winner else 0
+        obs = self._curr_state
         inf = _get_info()
 
         # recalculate action mask
@@ -135,25 +132,76 @@ class ConnectFour(OurEnv):
                 self.action_mask[idx] = False
         return obs, rew, term, trunc, inf
 
+    def step_2P(self, action, player):
+        # player move:
+        # iff top row full for selected column throw exception
+        if self._curr_state[0, action] != 0:
+            print("invalid actions should never be taken. (i.e. this column is full)...")
+            print()
+            print(self._curr_state)
+            print()
+            print(action)
+            raise Exception
+        insert_row = np.where(self._curr_state[:, action] == 0)[0][-1]
+        self._curr_state[insert_row, action] = player  # player indicates its pieces by a 1
+
+        # recalculate action mask
+        for idx, top_row_entry in enumerate(self._curr_state[0]):
+            if top_row_entry != 0:
+                self.action_mask[idx] = False
+
+        # check win condition
+        player_winner = False
+        if self.check_win(player):
+            player_winner = True
+
+        # check board full
+        is_full = self.board_full()
+
+        term = is_full or player_winner
+        trunc = False  # don't think we need this for this game
+        # truncated is a condition for early stopping without a terminal state being reached
+        opposite_player = 1 if player == 2 else 2  # Current player = 1 / 2 --> Opposite player = 2 / 1
+        rew = 1 if player_winner else -1 if self.check_win_potential(opposite_player) else 0
+        obs = self._curr_state
+        inf = _get_info()
+
+        return obs, rew, term, trunc, inf
+
     def display_board(self):
         print(self._curr_state)
 
+    def check_win_potential(self, player):
+        row_pos_potential_moves = []
 
-"""game = connect_four_env()
+        # find legal moves
+        for i in range(self.width):
+            empty_rows = np.where(self._curr_state[:, i] == 0)[0]
+            if 0 < len(empty_rows):
+                row_pos_potential_moves += [empty_rows[-1]]
+            else:
+                row_pos_potential_moves += [None]
+        # check if any leads to win for given player
+        for i, mask_entry in enumerate(self.action_mask):
+            if mask_entry != 1:
+                continue
+            self._curr_state[row_pos_potential_moves[i]][i] = player
+            if self.check_win(player=player):
+                self._curr_state[row_pos_potential_moves[i]][i] = 0
+                return True
+            self._curr_state[row_pos_potential_moves[i]][i] = 0
+
+        return False
+
+
+"""game = ConnectFour()
 game.reset()
-game.step(0)
+game._curr_state = np.array([[0., 0., 0., 0., 0., 0., 0.], [0., 0., 0., 0., 0., 0., 1.], [0., 0., 2., 0., 0., 0., 2.],
+                    [2., 1., 1., 1., 2., 0., 1.], [2., 1., 1., 2., 2., 0., 2.], [1., 2., 1., 2., 2., 0., 1.]])
+game.step_2P(6, 2)
 game.display_board()
-game.step(1)
-game.display_board()
-game.step(1)
-game.display_board()
-game.step(2)
-game.display_board()
-game.step(2)
-game.display_board()
-game.step(2)
-game.display_board()
-observation, reward, terminated, truncated, info = game.step(3)
-game.display_board()
-print(reward)
-print(terminated)"""  # for testing
+print()
+print(game.check_win_potential(1))
+print()
+game.display_board()"""
+

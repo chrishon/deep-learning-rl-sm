@@ -6,6 +6,22 @@ from experts.DQN.DQN import DQN
 from deep_learning_rl_sm.environments.connect_four import ConnectFour
 
 
+def run_game(environment, agent, adversary):
+    done = False
+    s, _ = environment.reset()
+    while not done:
+        action_agent = agent.get_action_from_net(state=torch.flatten(torch.tensor(s, dtype=torch.float32)),
+                                                 action_mask=environment.action_mask)
+        s, _, done, _, _ = environment.step_2P(action=action_agent, player=1)
+        environment.display_board()
+        if done:
+            break
+        action_adversary = adversary.get_action_from_net(state=torch.flatten(torch.tensor(s, dtype=torch.float32)),
+                                                         action_mask=environment.action_mask)
+        s, _, done, _, _ = environment.step_2P(action=action_adversary, player=2)
+        environment.display_board()
+
+
 def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
     # Select and perform an action
     current_state = torch.flatten(torch.tensor(current_state, dtype=torch.float32))
@@ -17,15 +33,13 @@ def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
     # TODO fix nan problem in masking
     """print(environment.action_mask)
     print(action)"""
-    next_state, reward, done, time_restriction, _ = environment.step(action)
+    player = 1 if adv is False else 2
+    next_state, reward, done, time_restriction, _ = environment.step_2P(action, player=player)
     next_action_mask = torch.tensor(environment.action_mask).unsqueeze(0)
 
     # convert to tensors
     done_mask = torch.Tensor([done])
     reward = torch.tensor(reward, dtype=torch.float32)
-
-    # flip reward for adversary
-    reward = -1.0 * reward if adv else reward
 
     # Store the transition in memory
     Replay_memory.push(current_state.unsqueeze(0), action.unsqueeze(0), action_mask, done_mask.unsqueeze(0),
@@ -61,7 +75,7 @@ if __name__ == "__main__":
                         help="Discount factor (default: 0.99)")
     parser.add_argument("--tau", default=0.001,
                         help="Update factor for the soft update of the target networks (default: 0.001)")
-    parser.add_argument("--EVALUATE", default=50, type=int,
+    parser.add_argument("--EVALUATE", default=500, type=int,
                         help="Number of episodes between testing cycles(default: 50)")
     parser.add_argument("--mem_size", default=10000, type=int,
                         help="Size of the Replay Buffer(default: 10000)")
@@ -108,6 +122,8 @@ if __name__ == "__main__":
         if i_episode % args.EVALUATE == 0:
             if len(memory_agent) >= args.BATCH_SIZE:
                 print("testing network...")
+                print()
+                run_game(ConnectFour(), agent_dqn, adversary_dqn)
 
         i_episode += 1
 
