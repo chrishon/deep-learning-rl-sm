@@ -19,6 +19,7 @@ class MinimalReinformer(nn.Module):
             drop_p,
             init_tmp,
             target_entropy,
+            discrete,
             max_timestep=4096):
         super().__init__()
 
@@ -51,7 +52,7 @@ class MinimalReinformer(nn.Module):
         # prediction heads /same as paper
         self.predict_rtg = nn.Linear(self.h_dim, 1)
         # stochastic action (output is distribution)
-        self.predict_action = Actor( self.a_dim, self.h_dim)
+        self.predict_action = Actor( self.a_dim, self.h_dim, discrete=discrete)
         self.predict_state = nn.Linear(self.h_dim, np.prod(self.s_dim))
 
         # For entropy /same as paper

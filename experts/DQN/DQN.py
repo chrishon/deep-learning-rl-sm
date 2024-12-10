@@ -90,13 +90,6 @@ class DQN(object):
             actionNo = torch.tensor([[indices[actionNo]]], device=device)
             return actionNo
 
-    def get_action_from_net(self, state, action_mask):
-        self.set_eval()
-        mask = torch.tensor([-1e9 if entry == 0 else 0 for entry in action_mask])
-        action = torch.argmax(self.policy_net(state, mask), dim=-1).unsqueeze(-1)
-        self.set_train()
-        return action
-
     @staticmethod
     def hard_update(target, source):
         for target_param, param in zip(target.parameters(), source.parameters()):

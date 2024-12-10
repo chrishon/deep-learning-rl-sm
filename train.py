@@ -5,6 +5,7 @@ import torch
 import wandb
 from deep_learning_rl_sm.trainer.trainer import Trainer
 from deep_learning_rl_sm.neuralnets.minimal_reinformer import MinimalReinformer
+from deep_learning_rl_sm.neuralnets.minGRU_Reinformer import minGRU_Reinformer
 from deep_learning_rl_sm.neuralnets.lamb import Lamb
 from deep_learning_rl_sm.environments import connect_four
 from data.custom_dataset import CustomDataset
@@ -17,6 +18,7 @@ env = connect_four.ConnectFour()
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_type", choices=["reinformer"], default="reinformer")
 parser.add_argument("--env", type=str, default=env)
+parser.add_argument("--env_discrete", type=bool, default=True)
 parser.add_argument("--dataset", type=str, default="medium")
 parser.add_argument("--num_eval_ep", type=int, default=10)
 parser.add_argument("--max_eval_ep_len", type=int, default=1000)
@@ -57,8 +59,13 @@ target_entropy = -np.log(np.prod(env.action_dim)) if discrete else -np.prod(env.
 args = vars(args)
 model = MinimalReinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],min_rnn=args["min_rnn"],
                           h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
-                          drop_p=args["dropout_p"], init_tmp=args["init_temperature"],
+                          drop_p=args["dropout_p"], init_tmp=args["init_temperature"],discrete=args["env_discrete"],
                           target_entropy=target_entropy)
+
+# model = minGRU_Reinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],
+#                           h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
+#                           drop_p=args["dropout_p"], init_tmp=args["init_temperature"],discrete=args["env_discrete"],
+#                           target_entropy=target_entropy)
 optimizer = Lamb(
             model.parameters(),
             lr=args["lr"],
@@ -66,9 +73,9 @@ optimizer = Lamb(
             eps=args["eps"],
         )
 scheduler = torch.optim.lr_scheduler.LambdaLR(
-            optimizer,
-            lambda steps: min((steps + 1) / args["warmup_steps"], 1)
-        )
+    optimizer,
+    lambda steps: min((steps + 1) / args["warmup_steps"], 1)
+)
 
 datapath = "data/offline_data.pt"
 dataset = CustomDataset(datapath)

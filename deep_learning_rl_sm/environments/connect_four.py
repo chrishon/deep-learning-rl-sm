@@ -35,6 +35,12 @@ class ConnectFour(OurEnv):
 
         self.max_two_p_game_length = 21
 
+        """self.adv_action_list_for_test = [1, 2, 2, 3, 3, 3]
+        self.adv_test_action_idx = 0"""  # for testing
+
+    def _get_obs(self):
+        return self._curr_state
+
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
