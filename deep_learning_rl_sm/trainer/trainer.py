@@ -148,7 +148,7 @@ class Trainer:
         print("Action Target shape: ", actions_target.shape)
         print("traj mask shape: ", traj_mask.shape)
         log_likelihood = actions_dist_preds.log_prob(
-            actions_target.view(-1)
+            actions_target.squeeze(-1)
         ).sum(axis=2).view(-1)[
             (traj_mask.view(-1) == 0) | (traj_mask.view(-1) == 1)
             ].mean()
