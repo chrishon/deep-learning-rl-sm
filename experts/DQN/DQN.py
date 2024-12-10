@@ -26,6 +26,10 @@ class DQN(object):
 
         self.optimizer = Adam(self.policy_net.parameters())
 
+    def soft_update(self):
+        for target_param, param in zip(self.target_net.parameters(), self.policy_net.parameters()):
+            target_param.data.copy_(target_param.data * (1.0 - 0.001) + param.data * 0.001)
+
     def set_eval(self):  # sets networks to evaluation mode (faster)
         # Sets the model in evaluation mode
         self.policy_net.eval()
@@ -37,7 +41,6 @@ class DQN(object):
         self.target_net.train()
 
     def update(self, transition_batch):
-        # TODO save action masks to replay buffer
         self.set_train()
 
         state_batch = torch.cat(transition_batch.state).to(device)
