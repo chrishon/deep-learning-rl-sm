@@ -123,6 +123,7 @@ if __name__ == "__main__":
     i_episode = 0
     num_passes = 0
     max_average_reward = float("-inf")
+    best_w_ratio_vs_random = 0.0
 
     # TRAINING
     while i_episode < args.num_games:
@@ -150,10 +151,14 @@ if __name__ == "__main__":
                 print(win_ratio)
                 print(draw_ratio)
                 print(loss_ratio)
+                if win_ratio > best_w_ratio_vs_random:
+                    best_w_ratio_vs_random = win_ratio
+                    print("saving network parameters...")
+                    torch.save(agent_dqn.policy_net.state_dict(), "net_configs/agent_dqn.pth")
+                    torch.save(adversary_dqn.policy_net.state_dict(), "net_configs/adversary_dqn.pth")
                 print()
 
         i_episode += 1
 
     print('Completed training...')
 
-    torch.save(agent_dqn.policy_net.state_dict(), "net_configs/dqn.pth")
