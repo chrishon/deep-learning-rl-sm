@@ -156,4 +156,4 @@ if __name__ == "__main__":
 
     print('Completed training...')
 
-    # torch.save(agent_dqn.policy_net.state_dict(), "net_configs/dqn.pth")
+    torch.save(agent_dqn.policy_net.state_dict(), "net_configs/dqn.pth")
