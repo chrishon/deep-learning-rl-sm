@@ -57,11 +57,10 @@ class DQN(object):
 
         # get Q-values
         state_action_values = self.policy_net(state_batch, action_mask_batch).gather(1, action_batch)
-        next_state_values = self.target_net(next_state_batch, nxt_action_mask_batch).max(1)[0].detach()
+        next_state_values = self.target_net(next_state_batch, nxt_action_mask_batch).max(1)[0].detach().unsqueeze(-1)
 
         # Compute the expected Q values
         expected_state_action_values = (1 - done_batch) * next_state_values * self.GAMMA + reward_batch
-        expected_state_action_values = expected_state_action_values.unsqueeze(1)  # change shape for loss
 
         # Compute MSE loss
         loss = F.mse_loss(state_action_values, expected_state_action_values)
