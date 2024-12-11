@@ -49,21 +49,36 @@ class DQN(object):
         reward_batch = torch.stack(transition_batch.reward).to(device)
         done_batch = torch.cat(transition_batch.done).to(device)
         next_state_batch = torch.cat(transition_batch.next_state).to(device)
-        nxt_action_mask_batch = torch.cat(transition_batch.next_action_mask).to(device)
+        next_action_mask_batch = torch.cat(transition_batch.next_action_mask).to(device)
 
-        # adjust masks for softmax
+        # Adjust masks for softmax
         action_mask_batch = torch.where(action_mask_batch == 1, 0, -1e9)
-        nxt_action_mask_batch = torch.where(nxt_action_mask_batch == 1, 0, -1e9)
+        next_action_mask_batch = torch.where(next_action_mask_batch == 1, 0, -1e9)
 
+        # Get Q-values
+        state_action_values = self.policy_net(state_batch, action_mask_batch).gather(1, action_batch)
+        next_state_action_values = self.policy_net(next_state_batch, next_action_mask_batch)
+        next_state_action_values_target = (1 - done_batch) * self.target_net(next_state_batch)
+        next_state_values_target = next_state_action_values_target.gather(1, torch.argmax(next_state_action_values,
+                                                                                          dim=1).unsqueeze(
+            1)).detach()
+
+        # Double Q-Learning
+        expected_state_action_values = (reward_batch + (self.GAMMA * next_state_values_target))
+        loss = F.mse_loss(state_action_values, expected_state_action_values)
+
+        """
+        plain vanilla DQN:
         # get Q-values
         state_action_values = self.policy_net(state_batch, action_mask_batch).gather(1, action_batch)
-        next_state_values = self.target_net(next_state_batch, nxt_action_mask_batch).max(1)[0].detach().unsqueeze(-1)
+        next_state_values_target = self.target_net(next_state_batch, next_action_mask_batch).max(1)[0].detach().unsqueeze(-1)
 
         # Compute the expected Q values
-        expected_state_action_values = (1 - done_batch) * next_state_values * self.GAMMA + reward_batch
+        expected_state_action_values = (1 - done_batch) * next_state_values_target * self.GAMMA + reward_batch
 
         # Compute MSE loss
-        loss = F.mse_loss(state_action_values, expected_state_action_values)
+        loss = F.mse_loss(state_action_values, expected_state_action_values)"""
+
         # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()

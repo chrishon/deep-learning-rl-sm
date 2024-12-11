@@ -103,7 +103,7 @@ if __name__ == "__main__":
                         help="used for random actions in DQN")
     parser.add_argument("--eps_end", default=0.1,
                         help="used for random actions in DQN")
-    parser.add_argument("--eps_decay", default=20000,
+    parser.add_argument("--eps_decay", default=5000,
                         help="used for random actions in DQN")
     parser.add_argument("--target_update", default=20, type=int,
                         help="number of iterations before dqn_target receives hard update")
