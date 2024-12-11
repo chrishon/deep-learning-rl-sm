@@ -56,6 +56,10 @@ def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
     action_mask = torch.tensor(environment.action_mask).unsqueeze(0)
     action = action.squeeze()
 
+    # TODO change Connect-4 env to be 2-player
+    # TODO fix nan problem in masking
+    """print(environment.action_mask)
+    print(action)"""
     player = 1 if adv is False else 2
     next_state, reward, done, time_restriction, _ = environment.step_2P(action, player=player)
     next_action_mask = torch.tensor(environment.action_mask).unsqueeze(0)
