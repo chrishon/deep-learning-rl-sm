@@ -108,8 +108,6 @@ if __name__ == "__main__":
     parser.add_argument("--target_update", default=20, type=int,
                         help="number of iterations before dqn_target receives hard update")
     args = parser.parse_args()
-    # TODO if enough time:
-    #  .double DQN
 
     memory_agent = ReplayMemory(args.mem_size)
     memory_adv = ReplayMemory(args.mem_size)
