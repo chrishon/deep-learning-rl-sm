@@ -1,6 +1,14 @@
+import numpy as np
+
 from deep_learning_rl_sm.environments.connect_four import ConnectFour
 from experts.DQN.DQN import DQN
 import torch
+
+
+# remember to convert state if conv version of agents used
+def convert_state(s):
+    s[s == 2] = -1
+    return s
 
 
 def run_game_vs_rand(environment, agent):
@@ -10,13 +18,20 @@ def run_game_vs_rand(environment, agent):
     for _ in range(1000):
         done = False
         last_reward = None
-        s, _ = environment.reset()
+        """print()
+        print()"""
+        state, _ = environment.reset()
+        # environment.display_board()
+        s = convert_state(np.copy(state))
         while not done:
-            action_agent = agent.get_action_from_net(state=torch.flatten(torch.tensor(s, dtype=torch.float32)),
+            # old version flattened state s!
+            action_agent = agent.get_action_from_net(state=torch.tensor(s, dtype=torch.float32),
                                                      action_mask=environment.action_mask)
-            s, r, done, _, _ = environment.step(action=action_agent)
-            # print("reward:"+str(r))
+            state, r, done, _, _ = environment.step(action=action_agent)
+            # environment.display_board()
+            s = convert_state(np.copy(state))
             last_reward = r
+        # print(last_reward)
         if last_reward == 1:
             w_ratio += 1
         elif last_reward == -1:
