@@ -63,17 +63,11 @@ def run_game_vs_rand(environment, agent):
 
 def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
     # Select and perform an action
-    # TODO expand channel and batch dimensions in correct places!
     current_state = torch.tensor(current_state, dtype=torch.float32)
     current_state = current_state.unsqueeze(0)
     action = agent.select_action(current_state, num_passes, environment.action_mask)
     action_mask = torch.tensor(environment.action_mask).unsqueeze(0)
     action = action.squeeze()
-
-    # TODO change Connect-4 env to be 2-player
-    # TODO fix nan problem in masking
-    """print(environment.action_mask)
-    print(action)"""
     player = 1 if adv is False else 2
     next_state, reward, done, time_restriction, _ = environment.step_2P(action, player=player)
     next_state = convert_state(np.copy(next_state))
