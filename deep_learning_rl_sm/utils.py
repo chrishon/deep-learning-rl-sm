@@ -2,6 +2,8 @@ from deep_learning_rl_sm.environments import connect_four
 import torch
 import os
 
+from experts.DQN.DQN import DQN
+
 
 def extract_dataset(data):
     # below the assumed format for the elements/trajectories in the dataset
@@ -25,9 +27,9 @@ def extract_dataset(data):
     return time_steps, action_masks, actions, returns_to_go, rewards, states, dones
 
 
-def generate_data(batch_size=1000):
+def generate_data(batch_size=1000, agent=None, adv=None):
     c4 = connect_four.ConnectFour()
-    data = c4.generate_seq(batch_size)
+    data = c4.generate_seq(batch_size, actor=agent, adv_actor=adv)
     time_steps, action_masks, actions, returns_to_go, rewards, states, traj_masks = extract_dataset(data)
 
     # [1,2,3,4,...] so 0 can be used as a padding index
@@ -94,7 +96,22 @@ def generate_data(batch_size=1000):
     return data_path
 
 
-dp = generate_data()
+# get saved agent and adversary (trained 2 Double-DQNs for connect-4)
+BATCH_SIZE = 64
+GAMMA = 0.99
+eps_start = 1.0
+eps_end = 0.1
+eps_decay = 5000
+agent_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
+adversary_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
+agent_dqn.policy_net.load_state_dict(torch.load("C:/Users/Tim/Documents/ETHz/DL/deep-learning-rl-sm/experts/DQN"
+                                                "/net_configs/agent_dqn.pth", weights_only=True))
+agent_dqn.policy_net.eval()
+adversary_dqn.policy_net.load_state_dict(torch.load("C:/Users/Tim/Documents/ETHz/DL/deep-learning-rl-sm/experts/DQN"
+                                                    "/net_configs/adversary_dqn.pth", weights_only=True))
+adversary_dqn.policy_net.eval()
+
+dp = generate_data(batch_size=1000, agent=agent_dqn, adv=adversary_dqn)
 
 loaded_data = torch.load(dp)
 
@@ -106,6 +123,7 @@ d = loaded_data['dones']
 t_s = loaded_data['time_steps']
 a_m = loaded_data['action_masks']
 r_t_g = loaded_data['returns_to_go']
+print(s[0].reshape((22, 6, 7)))
 """print(s.shape)  # state trajectories have one more timestep than the rest
 print(a.shape)
 print(r.shape)

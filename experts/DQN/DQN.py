@@ -1,6 +1,6 @@
 import math
 
-from DQN_net import DQN_net
+from experts.DQN.DQN_net import DQN_net
 import torch
 from torch.optim import Adam
 import torch.nn.functional as F
