@@ -18,8 +18,6 @@ def run_game_vs_rand(environment, agent):
     for _ in range(1000):
         done = False
         last_reward = None
-        """print()
-        print()"""
         state, _ = environment.reset()
         # environment.display_board()
         s = convert_state(np.copy(state))
