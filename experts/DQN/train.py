@@ -46,7 +46,6 @@ def run_game_vs_rand(environment, agent):
                                                      action_mask=environment.action_mask)
             s, r, done, _, _ = environment.step(action=action_agent)
             s = convert_state(np.copy(s))
-            # print("reward:"+str(r))
             last_reward = r
         if last_reward == 1:
             w_ratio += 1
@@ -90,7 +89,6 @@ def agent_loop(agent, current_state, Replay_memory, environment, adv=False):
 
         # soft update
         agent.soft_update()
-        # agent.target_net.load_state_dict(agent.policy_net.state_dict())
 
     return next_state, done
 
@@ -166,11 +164,11 @@ if __name__ == "__main__":
                 print(win_ratio)
                 print(draw_ratio)
                 print(loss_ratio)
-                if win_ratio > best_w_ratio_vs_random:
+                """if win_ratio > best_w_ratio_vs_random:
                     best_w_ratio_vs_random = win_ratio
                     print("saving network parameters...")
                     torch.save(agent_dqn.policy_net.state_dict(), "net_configs/agent_dqn.pth")
-                    torch.save(adversary_dqn.policy_net.state_dict(), "net_configs/adversary_dqn.pth")
+                    torch.save(adversary_dqn.policy_net.state_dict(), "net_configs/adversary_dqn.pth")"""
                 print()
 
         i_episode += 1
