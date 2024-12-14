@@ -288,6 +288,7 @@ class Trainer:
                     returns_to_go=returns_to_go,
                 )
                 for timestep in timesteps[0]:
+                    print(f"Timestep: {timestep}")
 
                     action_mask = self.env.action_mask  # Should return a tensor of 1s/0s
                     action_mask = torch.tensor(action_mask, dtype=torch.float32).to(self.device)
@@ -304,10 +305,15 @@ class Trainer:
                     # Create a new Categorical distribution with masked probabilities
                     masked_action_dist = torch.distributions.Categorical(probs=masked_probs)
                     act = masked_action_dist.sample().item()
+                    print(f"states: {states.shape}")
+             
                     state, reward, done, _, _ = self.env.step(act) #TODO
+                    print(f"state: {state.shape}")
                     actions[timestep,:] = act
-                    states[0,timestep,:] = torch.tensor(state)
-                    returns_to_go[timestep,:] = returns_to_go_preds
+                    states[0,timestep,:] = torch.flatten(torch.tensor(state))
+                    print("rtg shaoe1:, ", returns_to_go.shape)
+                    print("rtg shaoe:, ", returns_to_go_preds.squeeze(0).shape)
+                    returns_to_go = returns_to_go_preds.squeeze(0)
                     ratio += reward if reward == 1 else 0
                     if done:
                         break
