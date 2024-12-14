@@ -1,6 +1,6 @@
 import math
 
-from DQN_net import DQN_net
+from experts.DQN.DQN_net import DQN_net
 import torch
 from torch.optim import Adam
 import torch.nn.functional as F
@@ -105,6 +105,7 @@ class DQN(object):
             return actionNo
 
     def get_action_from_net(self, state, action_mask):
+        state = state.unsqueeze(0)  # give states channel dim
         self.set_eval()
         mask = torch.tensor([-1e9 if entry == 0 else 0 for entry in action_mask])
         action = torch.argmax(self.policy_net(state, mask), dim=-1).unsqueeze(-1)
