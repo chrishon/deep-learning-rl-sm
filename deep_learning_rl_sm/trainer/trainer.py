@@ -296,7 +296,7 @@ class Trainer:
                     # Apply mask to the probabilities
                     print("action_mask", action_mask)
                     print("actions_dist_preds.probs[0]", actions_dist_preds.probs[0])
-                    original_probs = actions_dist_preds.probs[0][timestep]
+                    original_probs = actions_dist_preds.probs[0][timestep-1]
                     masked_probs = original_probs * action_mask  # Mask out invalid actions
                     print("masked_probs ", masked_probs)
                     masked_probs = masked_probs / masked_probs.sum()  # Renormalize
@@ -309,8 +309,8 @@ class Trainer:
              
                     state, reward, done, _, _ = self.env.step(act) #TODO
                     print(f"state: {state.shape}")
-                    actions[timestep,:] = act
-                    states[0,timestep,:] = torch.flatten(torch.tensor(state))
+                    actions[timestep-1,:] = act
+                    states[0,timestep-1,:] = torch.flatten(torch.tensor(state))
                     print("rtg shaoe1:, ", returns_to_go.shape)
                     print("rtg shaoe:, ", returns_to_go_preds.squeeze(0).shape)
                     returns_to_go = returns_to_go_preds.squeeze(0)
