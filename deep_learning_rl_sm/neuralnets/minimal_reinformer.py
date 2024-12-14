@@ -23,6 +23,7 @@ class MinimalReinformer(nn.Module):
             max_timestep=4096):
         super().__init__()
 
+        self.num_actions = 7 #TODO dynamic
         self.a_dim = act_dim
         self.s_dim = state_dim
         self.h_dim = h_dim
@@ -52,7 +53,7 @@ class MinimalReinformer(nn.Module):
         # prediction heads /same as paper
         self.predict_rtg = nn.Linear(self.h_dim, 1)
         # stochastic action (output is distribution)
-        self.predict_action = Actor( self.a_dim, self.h_dim, discrete=discrete)
+        self.predict_action = Actor( self.num_actions, self.h_dim, discrete=discrete)
         self.predict_state = nn.Linear(self.h_dim, np.prod(self.s_dim))
 
         # For entropy /same as paper
