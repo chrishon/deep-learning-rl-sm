@@ -305,6 +305,9 @@ class Trainer:
                     masked_action_dist = torch.distributions.Categorical(probs=masked_probs)
                     act = masked_action_dist.sample().item()
                     state, reward, done, _, _ = self.env.step(act) #TODO
+                    actions[timestep,:] = act
+                    states[0,timestep,:] = torch.tensor(state)
+                    returns_to_go[timestep,:] = returns_to_go_preds
                     ratio += reward if reward == 1 else 0
                     if done:
                         break
