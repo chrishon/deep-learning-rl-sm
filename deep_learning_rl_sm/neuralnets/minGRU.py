@@ -122,6 +122,7 @@ class BlockV2(Module):
     def __init__(self,dim,n_layers,drop_p,kernel_size,expansion_factor, mult=4):
         """This Version corresponds to what has been done in https://github.com/lucidrains/minGRU-pytorch/"""
         super().__init__()
+        self.seq = []
         self.module_list = []
         for i in range(n_layers):
             self.conv = CausalDepthWiseConv1d(dim, kernel_size) #Conv1dLayer(dim,kernel_size)
@@ -134,7 +135,9 @@ class BlockV2(Module):
                 nn.Linear(mult * dim, dim),
                 nn.Dropout(drop_p),
             )
+            self.seq = self.seq + [self.conv, self.ln1, self.min_gru, self.ln2, self.mlp]
             self.module_list.append((self.conv, self.ln1, self.min_gru, self.ln2, self.mlp))
+        self.seq = nn.Sequential(*self.seq)
             
     def forward(self,x): 
         for conv, ln1, mingru, ln2, mlp in self.module_list:
