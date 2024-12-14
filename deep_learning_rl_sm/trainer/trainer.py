@@ -227,7 +227,7 @@ class Trainer:
                     )
 
                 if num_updates % 50 == 0 and num_updates != 0:
-                    win_loss_ratio_test = self.evaluate_online(env=env)
+                    win_loss_ratio_test = self.evaluate_online()
                     print("win loss ratio: " + str(win_loss_ratio_test))
                 num_updates += 1
 
@@ -255,7 +255,7 @@ class Trainer:
 
     def evaluate_online(self):
         ratio = 0
-        for _ in range(50):
+        for trial in range(50):
             # states vector is 1 timestep larger because of init state
             # flatten board state
             s0 = torch.flatten(torch.tensor(self.env.reset()[0]))
@@ -317,6 +317,7 @@ class Trainer:
                     ratio += reward if reward == 1 else 0
                     if done:
                         break
+                break
         ratio /= 50
 
         return ratio
