@@ -289,7 +289,21 @@ class Trainer:
                 )
                 for timestep in timesteps[0]:
 
-                    act = torch.argmax(actions[timestep,:])
+                    action_mask = self.env.action_mask  # Should return a tensor of 1s/0s
+                    action_mask = torch.tensor(action_mask, dtype=torch.float32).to(self.device)
+
+                    # Apply mask to the probabilities
+                    print("action_mask", action_mask)
+                    print("actions_dist_preds.probs[0]", actions_dist_preds.probs[0])
+                    original_probs = actions_dist_preds.probs[0][timestep]
+                    masked_probs = original_probs * action_mask  # Mask out invalid actions
+                    print("masked_probs ", masked_probs)
+                    masked_probs = masked_probs / masked_probs.sum()  # Renormalize
+                    print("masked_probs ", masked_probs)
+
+                    # Create a new Categorical distribution with masked probabilities
+                    masked_action_dist = torch.distributions.Categorical(probs=masked_probs)
+                    act = masked_action_dist.sample().item()
                     state, reward, done, _, _ = self.env.step(act) #TODO
                     ratio += reward if reward == 1 else 0
                     if done:
