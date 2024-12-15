@@ -13,7 +13,7 @@ class minGRU_Reinformer(nn.Module):
             n_blocks,
             h_dim,
             context_len,
-            n_layers,
+            n_heads,
             drop_p,
             init_tmp,
             target_entropy,
@@ -31,7 +31,7 @@ class minGRU_Reinformer(nn.Module):
         self.num_inputs = 3
         #seq_len_in = self.num_inputs * context_len
         min_gru_blocks = [ #Consider trying BlockV2
-            BlockV1(self.h_dim,n_layers, drop_p,kernel_size,expansion_factor)
+            BlockV1(self.h_dim,n_heads, drop_p,kernel_size,expansion_factor)
             for _ in range(n_blocks)
         ]
         self.min_gru_stacked = nn.Sequential(*min_gru_blocks)

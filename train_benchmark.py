@@ -92,7 +92,7 @@ if __name__ == "__main__":
     args = vars(args)
     target_entropy = -np.log(np.prod(act_dim)) if args["env_discrete"] else -np.prod(act_dim)
     model = minGRU_Reinformer(state_dim=state_dim, act_dim=act_dim, n_blocks=args["n_blocks"],
-                            h_dim=args["embed_dim"], context_len=args["context_len"], n_layers=args["n_layers"],
+                            h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_layers"],
                             drop_p=args["dropout_p"], init_tmp=args["init_temperature"],
                             target_entropy=target_entropy, discrete=args["env_discrete"])
     model=model.to(device)
