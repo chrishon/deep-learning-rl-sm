@@ -62,10 +62,10 @@ model = MinimalReinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blo
                           drop_p=args["dropout_p"], init_tmp=args["init_temperature"],discrete=args["env_discrete"],
                           target_entropy=target_entropy)
 
-# model = minGRU_Reinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],
-#                           h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
-#                           drop_p=args["dropout_p"], init_tmp=args["init_temperature"],discrete=args["env_discrete"],
-#                           target_entropy=target_entropy)
+model = minGRU_Reinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],
+                          h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
+                          drop_p=args["dropout_p"], init_tmp=args["init_temperature"],discrete=args["env_discrete"],
+                          target_entropy=target_entropy)
 optimizer = Lamb(
             model.parameters(),
             lr=args["lr"],

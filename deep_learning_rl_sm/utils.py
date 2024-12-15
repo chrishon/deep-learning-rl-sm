@@ -10,6 +10,8 @@ import os
 import numpy as np
 import h5py
 
+from experts.DQN.DQN import DQN
+
 def download_all_benchmarks():
     if not os.path.exists(datapath):
         os.makedirs(datapath)
@@ -146,10 +148,10 @@ eps_end = 0.1
 eps_decay = 5000
 agent_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
 adversary_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
-agent_dqn.policy_net.load_state_dict(torch.load("C:/Users/Tim/Documents/ETHz/DL/deep-learning-rl-sm/experts/DQN"
+agent_dqn.policy_net.load_state_dict(torch.load("experts/DQN"
                                                 "/net_configs/agent_dqn.pth", weights_only=True))
 agent_dqn.policy_net.eval()
-adversary_dqn.policy_net.load_state_dict(torch.load("C:/Users/Tim/Documents/ETHz/DL/deep-learning-rl-sm/experts/DQN"
+adversary_dqn.policy_net.load_state_dict(torch.load("experts/DQN"
                                                     "/net_configs/adversary_dqn.pth", weights_only=True))
 adversary_dqn.policy_net.eval()
 
