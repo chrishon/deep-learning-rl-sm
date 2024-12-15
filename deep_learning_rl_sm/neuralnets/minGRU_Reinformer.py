@@ -19,8 +19,9 @@ class minGRU_Reinformer(nn.Module):
             target_entropy,
             discrete,
             max_timestep=4096,
-            expansion_factor = 1.5,
-            kernel_size = 3):
+            expansion_factor=1.5,
+            kernel_size=3,
+            block_type="MinGruBlockV1"):
         super().__init__()
         self.num_actions = 7
         self.a_dim = act_dim if not discrete else self.num_actions
@@ -29,11 +30,14 @@ class minGRU_Reinformer(nn.Module):
 
         # minGRU blocks
         self.num_inputs = 3
-        #seq_len_in = self.num_inputs * context_len
-        min_gru_blocks = [ #Consider trying BlockV2
-            BlockV1(self.h_dim,n_heads, drop_p,kernel_size,expansion_factor)
-            for _ in range(n_blocks)
-        ]
+        # seq_len_in = self.num_inputs * context_len
+        min_gru_blocks = [  # Consider trying BlockV2
+            BlockV1(self.h_dim, n_heads, drop_p, kernel_size, expansion_factor)
+            for _ in range(n_blocks)] \
+            if block_type == "MinGruBlockV1" else ([BlockV2(self.h_dim, n_heads, drop_p, kernel_size, expansion_factor)
+                                                   for _ in range(n_blocks)] if block_type == "MinGruBlockV2" else "X")
+        if min_gru_blocks == "X":
+            raise Exception("invalid block type selected...")
         self.min_gru_stacked = nn.Sequential(*min_gru_blocks)
 
         # projection heads (project to embedding) /same as paper
@@ -104,7 +108,9 @@ class minGRU_Reinformer(nn.Module):
         # get predictions
         rtg_preds = self.predict_rtg(h[:, 0])  # predict rtg given s
         action_dist_preds = self.predict_action(h[:, 1])  # predict action given s, R
-        #state_preds = self.predict_state(h[:, 2])  # predict next state given s, R, a
+        # state_preds = self.predict_state(h[:, 2])  # predict next state given s, R, a
+
+        # Note: state preds not used in reinformer paper!
 
         return rtg_preds, action_dist_preds, None
 
