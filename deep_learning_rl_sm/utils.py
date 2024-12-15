@@ -1,9 +1,51 @@
+import warnings
+warnings.filterwarnings("ignore")
+def warn(*args, **kwargs):
+    pass
+
 from deep_learning_rl_sm.environments import connect_four
+from deep_learning_rl_sm.benchmarks.get_benchmark import *
 import torch
 import os
+import numpy as np
+import h5py
 
-from experts.DQN.DQN import DQN
+def download_all_benchmarks():
+    if not os.path.exists(datapath):
+        os.makedirs(datapath)
+    for env_bm in ENV_BENCHMARKS:
+        download_dataset_from_url(env_bm)
 
+def benchmark_data(filepath):
+    """Get the data in numpy format from a benchmark filepath"""
+    file = h5py.File(filepath,"r+")
+    actions = file['actions'][()]
+    next_observations = file['next_observations'][()]
+    observations = file['observations'][()]
+    rewards = file['rewards'][()]
+    terminals = file['terminals'][()]
+    timeouts = file['timeouts'][()]
+    dones = terminals | timeouts
+    trajs = [-1]+[i for i,x in enumerate(dones) if x] #gets trajectory indices
+    obs,act,r,rtg,d,l,ret_sum = [],[],[],[],[],[],[]
+    for i in range(len(trajs)-1):
+        ind_st = trajs[i]+1
+        ind_end = trajs[i+1]+1
+        l.append(ind_end - ind_st)
+        traj_rews = rewards[ind_st:ind_end]
+        final_rew = sum(traj_rews)
+        cumsum_rewards = np.cumsum(traj_rews)
+        rew_to_go = final_rew - cumsum_rewards
+        ob = observations[ind_st:ind_end]
+        ac = actions[ind_st:ind_end]
+        done = dones[ind_st:ind_end]
+        r.append(traj_rews)
+        obs.append(ob)
+        act.append(ac)
+        rtg.append(rew_to_go)
+        d.append(done)
+        ret_sum.append(final_rew)
+    return obs,act,r,rtg,d,l,ret_sum
 
 def extract_dataset(data):
     # below the assumed format for the elements/trajectories in the dataset

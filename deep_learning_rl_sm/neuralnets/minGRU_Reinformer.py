@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from deep_learning_rl_sm.neuralnets.minGRU import minGRU
+from deep_learning_rl_sm.neuralnets.minGRU import BlockV1, BlockV2
 from deep_learning_rl_sm.neuralnets.nets import Actor
 
 
@@ -13,24 +13,25 @@ class minGRU_Reinformer(nn.Module):
             n_blocks,
             h_dim,
             context_len,
-            n_heads,
+            n_layers,
             drop_p,
             init_tmp,
             target_entropy,
             discrete,
-            max_timestep=4096):
+            max_timestep=4096,
+            expansion_factor = 1.5,
+            kernel_size = 3):
         super().__init__()
-
         self.num_actions = 7
-        self.a_dim = act_dim  # TODO have categorical option
+        self.a_dim = act_dim if not discrete else self.num_actions
         self.s_dim = state_dim
         self.h_dim = h_dim
 
         # minGRU blocks
         self.num_inputs = 3
-        seq_len_in = self.num_inputs * context_len
-        min_gru_blocks = [
-            minGRU(self.h_dim)
+        #seq_len_in = self.num_inputs * context_len
+        min_gru_blocks = [ #Consider trying BlockV2
+            BlockV1(self.h_dim,n_layers, drop_p,kernel_size,expansion_factor)
             for _ in range(n_blocks)
         ]
         self.min_gru_stacked = nn.Sequential(*min_gru_blocks)
@@ -45,7 +46,7 @@ class minGRU_Reinformer(nn.Module):
         # prediction heads /same as paper
         self.predict_rtg = nn.Linear(self.h_dim, 1)
         # stochastic action (output is distribution)
-        self.predict_action = Actor(self.num_actions, self.h_dim, discrete=discrete)
+        self.predict_action = Actor(self.a_dim, self.h_dim, discrete=discrete)
         self.predict_state = nn.Linear(self.h_dim, np.prod(self.s_dim))
 
         # For entropy /same as paper
@@ -103,9 +104,9 @@ class minGRU_Reinformer(nn.Module):
         # get predictions
         rtg_preds = self.predict_rtg(h[:, 0])  # predict rtg given s
         action_dist_preds = self.predict_action(h[:, 1])  # predict action given s, R
-        state_preds = self.predict_state(h[:, 2])  # predict next state given s, R, a
+        #state_preds = self.predict_state(h[:, 2])  # predict next state given s, R, a
 
-        return rtg_preds, action_dist_preds, state_preds
+        return rtg_preds, action_dist_preds, None
 
     def temp(self):
         return torch.exp(self.log_tmp)

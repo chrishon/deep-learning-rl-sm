@@ -5,23 +5,26 @@ import torch
 import wandb
 from torch.optim import Optimizer
 import torch.nn as nn
+import time
 from torch.utils.data import DataLoader
 
 
 class Trainer:
-    def __init__(self, model, dataset, optimizer: Optimizer, scheduler, parsed_args, batch_size: int = 32,
-                 learning_rate: float = 1e-3, num_epochs: int = 10, device=None):
+    def __init__(self, model : nn.Module, optimizer: Optimizer, scheduler, batch_size: int = 32,
+                 learning_rate: float = 1e-3, num_epochs: int = 10, device=None,dataset=None,get_batch = None,parsed_args=None):
         self.tau = parsed_args["tau"]
         self.grad_norm = parsed_args["grad_norm"]
         self.model = model.to(device)
         self.dataset = dataset
+        self.get_batch = get_batch
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.num_epochs = num_epochs
         self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Define DataLoader
-        self.data_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        if dataset is not None:
+            self.data_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
         # Define optimizer and loss function
         self.optimizer = optimizer
@@ -345,3 +348,117 @@ class Trainer:
         avg_loss = total_loss / len(data_loader)
         print(f"Evaluation Loss: {avg_loss:.4f}")
         return avg_loss
+    
+    def train_iteration_benchmark(self, num_steps, iter_num=0, print_logs=False):
+
+        train_losses = []
+        logs = dict()
+
+        train_start = time.time()
+
+        # training -----------------------------------------------
+        self.model.train()
+        for _ in range(num_steps):
+            train_loss = self.train_step_benchmark()
+            train_losses.append(train_loss)
+            if self.scheduler is not None:
+                self.scheduler.step()
+
+        logs['time/training'] = time.time() - train_start
+
+        eval_start = time.time()
+
+        # evaluation -----------------------------------------------
+        """self.model.eval()
+        for eval_fn in self.eval_fns:
+            outputs = eval_fn(self.model)
+            for k, v in outputs.items():
+                logs[f'evaluation/{k}'] = v
+
+        logs['time/total'] = time.time() - self.start_time
+        logs['time/evaluation'] = time.time() - eval_start
+        logs['training/train_loss_mean'] = np.mean(train_losses)
+        logs['training/train_loss_std'] = np.std(train_losses)"""
+
+        
+        # diagnostics -----------------------------------------------
+        """for k in self.diagnostics:
+            logs[k] = self.diagnostics[k]"""
+
+        if print_logs:
+            print('=' * 80)
+            print(f'Iteration {iter_num}')
+            for k, v in logs.items():
+                print(f'{k}: {v}')
+
+        return logs
+
+    def train_step_benchmark(self):
+            states, actions, rewards, dones, rtg, timesteps, traj_mask = self.get_batch(self.batch_size)
+            self.model = self.model.to(self.device)
+            # model forward ----------------------------------------------
+            (
+                returns_to_go_preds,
+                actions_dist_preds,
+                _,
+            ) = self.model.forward(
+                timesteps=timesteps,
+                states=states,
+                actions=actions,
+                returns_to_go=rtg,
+            )
+
+            returns_to_go_target = torch.clone(rtg).view(
+                -1, 1
+            )[
+                traj_mask.view(-1,) > 0
+            ]
+            returns_to_go_preds = returns_to_go_preds.view(-1, 1)[
+                traj_mask.view(-1,) > 0
+            ]
+
+            # returns_to_go_loss -----------------------------------------
+            norm = returns_to_go_target.abs().mean()
+            u = (returns_to_go_target - returns_to_go_preds) / norm
+            returns_to_go_loss = torch.mean(
+                torch.abs(
+                    self.tau - (u < 0).float()
+                ) * u ** 2
+            )
+            # action_loss ------------------------------------------------
+            actions_target = torch.clone(actions)
+            log_likelihood = actions_dist_preds.log_prob(
+                actions_target
+                ).sum(axis=2)[
+                traj_mask > 0
+            ].mean()
+            entropy = actions_dist_preds.entropy().sum(axis=2).mean()
+            action_loss = -(log_likelihood + self.model.temp().detach() * entropy)
+
+            loss = returns_to_go_loss + action_loss
+
+            # optimizer -----------------------------------------------
+            self.optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(),
+                self.grad_norm
+            )
+            self.optimizer.step()
+            
+            # scheduler -----------------------------------------------
+            self.log_temperature_optimizer.zero_grad()
+            temperature_loss = (
+                    self.model.temp() * (entropy - self.model.target_entropy).detach()
+            )
+            temperature_loss.backward()
+            self.log_temperature_optimizer.step()
+
+            self.scheduler.step()
+            
+            
+            # diagnostics -----------------------------------------------
+            """with torch.no_grad():
+                self.diagnostics['training/action_error'] = torch.mean((action_preds-action_target)**2).detach().cpu().item()"""
+
+            return loss.detach().cpu().item()
