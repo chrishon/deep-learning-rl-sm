@@ -47,7 +47,11 @@ def benchmark_data(filepath):
         rtg.append(rew_to_go)
         d.append(done)
         ret_sum.append(final_rew)
-    return obs,act,r,rtg,d,l,ret_sum
+    obs_concat = np.concatenate(obs, axis=0)
+    state_mean, state_std = np.mean(obs_concat, axis=0), np.std(obs_concat, axis=0) + 1e-6
+    obs = [(ob - state_mean)/state_std for ob in obs] #Normalize
+    del ret_sum,r,d
+    return obs,act,rtg,state_mean,state_std
 
 def extract_dataset(data):
     # below the assumed format for the elements/trajectories in the dataset
