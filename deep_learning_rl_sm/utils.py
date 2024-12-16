@@ -1,7 +1,11 @@
 import warnings
+
 warnings.filterwarnings("ignore")
+
+
 def warn(*args, **kwargs):
     pass
+
 
 from deep_learning_rl_sm.environments import connect_four
 from deep_learning_rl_sm.benchmarks.get_benchmark import *
@@ -12,15 +16,17 @@ import h5py
 
 from experts.DQN.DQN import DQN
 
+
 def download_all_benchmarks():
     if not os.path.exists(datapath):
         os.makedirs(datapath)
     for env_bm in ENV_BENCHMARKS:
         download_dataset_from_url(env_bm)
 
+
 def benchmark_data(filepath):
     """Get the data in numpy format from a benchmark filepath"""
-    file = h5py.File(filepath,"r+")
+    file = h5py.File(filepath, "r+")
     actions = file['actions'][()]
     next_observations = file['next_observations'][()]
     observations = file['observations'][()]
@@ -28,11 +34,11 @@ def benchmark_data(filepath):
     terminals = file['terminals'][()]
     timeouts = file['timeouts'][()]
     dones = terminals | timeouts
-    trajs = [-1]+[i for i,x in enumerate(dones) if x] #gets trajectory indices
-    obs,act,r,rtg,d,l,ret_sum = [],[],[],[],[],[],[]
-    for i in range(len(trajs)-1):
-        ind_st = trajs[i]+1
-        ind_end = trajs[i+1]+1
+    trajs = [-1] + [i for i, x in enumerate(dones) if x]  # gets trajectory indices
+    obs, act, r, rtg, d, l, ret_sum = [], [], [], [], [], [], []
+    for i in range(len(trajs) - 1):
+        ind_st = trajs[i] + 1
+        ind_end = trajs[i + 1] + 1
         l.append(ind_end - ind_st)
         traj_rews = rewards[ind_st:ind_end]
         final_rew = sum(traj_rews)
@@ -49,9 +55,10 @@ def benchmark_data(filepath):
         ret_sum.append(final_rew)
     obs_concat = np.concatenate(obs, axis=0)
     state_mean, state_std = np.mean(obs_concat, axis=0), np.std(obs_concat, axis=0) + 1e-6
-    obs = [(ob - state_mean)/state_std for ob in obs] #Normalize
-    del ret_sum,r,d
-    return obs,act,rtg,state_mean,state_std
+    obs = [(ob - state_mean) / state_std for ob in obs]  # Normalize
+    del ret_sum, r, d
+    return obs, act, rtg, state_mean, state_std
+
 
 def extract_dataset(data):
     # below the assumed format for the elements/trajectories in the dataset
@@ -143,39 +150,45 @@ def generate_data(batch_size=1000, agent=None, adv=None):
     }, data_path)
     return data_path
 
-#Why is this in global scope?
-"""# get saved agent and adversary (trained 2 Double-DQNs for connect-4)
-BATCH_SIZE = 64
-GAMMA = 0.99
-eps_start = 1.0
-eps_end = 0.1
-eps_decay = 5000
-agent_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
-adversary_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
-agent_dqn.policy_net.load_state_dict(torch.load("experts/DQN"
-                                                "/net_configs/agent_dqn.pth", weights_only=True))
-agent_dqn.policy_net.eval()
-adversary_dqn.policy_net.load_state_dict(torch.load("experts/DQN"
-                                                    "/net_configs/adversary_dqn.pth", weights_only=True))
-adversary_dqn.policy_net.eval()
 
-dp = generate_data(batch_size=1000, agent=agent_dqn, adv=adversary_dqn)
+def main():
+    # get saved agent and adversary (trained 2 Double-DQNs for connect-4)
+    BATCH_SIZE = 64
+    GAMMA = 0.99
+    eps_start = 1.0
+    eps_end = 0.1
+    eps_decay = 5000
+    agent_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
+    adversary_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
+    # TODO path might need to be changed for you (i needed an absolute path : Tim)
+    agent_dqn.policy_net.load_state_dict(torch.load("experts/DQN"
+                                                    "/net_configs/agent_dqn.pth", weights_only=True))
+    agent_dqn.policy_net.eval()
+    adversary_dqn.policy_net.load_state_dict(torch.load("experts/DQN"
+                                                        "/net_configs/adversary_dqn.pth", weights_only=True))
+    adversary_dqn.policy_net.eval()
 
-loaded_data = torch.load(dp)
+    dp = generate_data(batch_size=1000, agent=agent_dqn, adv=adversary_dqn)
 
-# Access individual items from the loaded dictionary
-s = loaded_data['states']
-a = loaded_data['actions']
-r = loaded_data['rewards']
-d = loaded_data['dones']
-t_s = loaded_data['time_steps']
-a_m = loaded_data['action_masks']
-r_t_g = loaded_data['returns_to_go']
-print(s[0].reshape((22, 6, 7)))"""
-"""print(s.shape)  # state trajectories have one more timestep than the rest
-print(a.shape)
-print(r.shape)
-print(d.shape)
-print(t_s.shape)
-print(a_m.shape)
-print(r_t_g.shape)"""
+    loaded_data = torch.load(dp)
+
+    # Access individual items from the loaded dictionary
+    s = loaded_data['states']
+    a = loaded_data['actions']
+    r = loaded_data['rewards']
+    d = loaded_data['dones']
+    t_s = loaded_data['time_steps']
+    a_m = loaded_data['action_masks']
+    r_t_g = loaded_data['returns_to_go']
+    print(s[0].reshape((22, 6, 7)))
+    """print(s.shape)  # state trajectories have one more timestep than the rest
+    print(a.shape)
+    print(r.shape)
+    print(d.shape)
+    print(t_s.shape)
+    print(a_m.shape)
+    print(r_t_g.shape)"""
+
+
+if __name__ == "__main__":
+    main()
