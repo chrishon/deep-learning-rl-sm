@@ -11,12 +11,11 @@ from torch.utils.data import DataLoader
 
 class Trainer:
     def __init__(self, model : nn.Module, optimizer: Optimizer, scheduler, batch_size: int = 32,
-                 learning_rate: float = 1e-3, num_epochs: int = 10, device=None,dataset=None,get_batch = None,parsed_args=None):
+                 learning_rate: float = 1e-3, num_epochs: int = 10, device=None,dataset=None,parsed_args=None):
         self.tau = parsed_args["tau"]
         self.grad_norm = parsed_args["grad_norm"]
         self.model = model.to(device)
         self.dataset = dataset
-        self.get_batch = get_batch
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.num_epochs = num_epochs
@@ -24,7 +23,8 @@ class Trainer:
 
         # Define DataLoader
         if dataset is not None:
-            self.data_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+            self.data_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True,pin_memory=True,drop_last=True)
+            self.data_iter = iter(self.data_loader)
 
         # Define optimizer and loss function
         self.optimizer = optimizer

@@ -143,8 +143,8 @@ def generate_data(batch_size=1000, agent=None, adv=None):
     }, data_path)
     return data_path
 
-
-# get saved agent and adversary (trained 2 Double-DQNs for connect-4)
+#Why is this in global scope?
+"""# get saved agent and adversary (trained 2 Double-DQNs for connect-4)
 BATCH_SIZE = 64
 GAMMA = 0.99
 eps_start = 1.0
@@ -171,7 +171,7 @@ d = loaded_data['dones']
 t_s = loaded_data['time_steps']
 a_m = loaded_data['action_masks']
 r_t_g = loaded_data['returns_to_go']
-print(s[0].reshape((22, 6, 7)))
+print(s[0].reshape((22, 6, 7)))"""
 """print(s.shape)  # state trajectories have one more timestep than the rest
 print(a.shape)
 print(r.shape)

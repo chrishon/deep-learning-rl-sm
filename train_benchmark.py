@@ -21,10 +21,9 @@ def parse_args():
     parser.add_argument("--num_eval_ep", type=int, default=10)
     parser.add_argument("--max_eval_ep_len", type=int, default=1000)
     parser.add_argument("--dataset_dir", type=str, default="deep_learning_rl_sm/benchmarks/data/halfcheetah_medium_expert-v2.hdf5")
-    parser.add_argument("--context_len", type=int, default=5)
+    parser.add_argument("--context_len", type=int, default=20)
     parser.add_argument("--n_blocks", type=int, default=4)
     parser.add_argument("--embed_dim", type=int, default=256)
-    parser.add_argument('--K', type=int, default=20)
     parser.add_argument("--n_layers", type=int, default=8)
     parser.add_argument("--dropout_p", type=float, default=0.1)
     parser.add_argument("--grad_norm", type=float, default=0.25)
@@ -98,14 +97,14 @@ if __name__ == "__main__":
             scale = 5000
             env_name = "HalfCheetah"
     observations, acts, rew_to_gos,state_mean,state_std = benchmark_data(fp)
-    environment = gym.make(env_name + "-v2")
+    environment = None#gym.make(env_name + "-v2")
     def get_normalized_score(score, env = env):
         return (score - REF_MIN_SCORE[env]) / (REF_MAX_SCORE[env] - REF_MIN_SCORE[env])
     def evaluator(model):
             return_mean, _, _, _ = Reinformer_eval(
                 model=model,
                 device=device,
-                context_len=max_ep_len,
+                context_len=args["context_len"],
                 env = environment,
                 state_mean=state_mean,
                 state_std=state_std,
@@ -120,7 +119,7 @@ if __name__ == "__main__":
     args = vars(args)
     target_entropy = -np.log(np.prod(act_dim)) if args["env_discrete"] else -np.prod(act_dim)
     model = minGRU_Reinformer(state_dim=state_dim, act_dim=act_dim,
-                            h_dim=args["embed_dim"], n_layers=args["n_layers"],
+                            h_dim=args["embed_dim"], n_heads=args["n_layers"],
                             drop_p=args["dropout_p"], init_tmp=args["init_temperature"],
                             target_entropy=target_entropy, discrete=args["env_discrete"], batch_size = args["batch_size"], device=device, max_timestep=max_ep_len)
     model=model.to(device)
@@ -136,7 +135,7 @@ if __name__ == "__main__":
         lambda steps: min((steps + 1) / args["warmup_steps"], 1)
     )
     #perhaps dynamically incease K
-    dataset = D4RLDataset(observations,acts,rew_to_gos,args["K"])
+    dataset = D4RLDataset(observations,acts,rew_to_gos,args["context_len"])
     del observations,acts,rew_to_gos
     traj_data_loader = DataLoader(
         dataset,
@@ -145,7 +144,7 @@ if __name__ == "__main__":
         pin_memory=True,
         drop_last=True,
     )
-    trainer = Trainer(model=model, data_loader = traj_data_loader, optimizer=optimizer, scheduler=scheduler, parsed_args=args, batch_size=args["batch_size"], device=device)
+    trainer = Trainer(model=model, dataset=dataset, optimizer=optimizer, scheduler=scheduler, parsed_args=args, batch_size=args["batch_size"], device=device)
     del model, traj_data_loader
     torch.backends.cudnn.benchmark = True
     d4rl_norm_scores = []

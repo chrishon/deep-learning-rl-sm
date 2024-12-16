@@ -6,6 +6,7 @@ from pathlib import Path
 mujoco_v2 = "http://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/"
 datapath = "deep_learning_rl_sm\\benchmarks\\data\\"
 def download_dataset_from_url(env_bm):
+    os.makedirs(datapath,exist_ok=True)
     dataset_url = mujoco_v2+env_bm+".hdf5"
     dataset_filepath = datapath+env_bm+".hdf5"
     if not os.path.exists(dataset_filepath):

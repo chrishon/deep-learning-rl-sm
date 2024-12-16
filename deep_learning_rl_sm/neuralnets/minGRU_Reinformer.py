@@ -11,7 +11,6 @@ class minGRU_Reinformer(nn.Module):
             state_dim,
             act_dim,
             h_dim,
-            context_len,
             drop_p,
             init_tmp,
             target_entropy,
@@ -33,8 +32,8 @@ class minGRU_Reinformer(nn.Module):
         self.num_inputs = 3
         # seq_len_in = self.num_inputs * context_len
         min_gru_blocks = [
-            MinGRUCell(self.h_dim,n_layers, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
-            for _ in range(n_blocks)] \
+            MinGRUCell(self.h_dim,n_heads, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
+            for _ in range(n_heads)] \
             if block_type == "mingru" else ([list(self.h_dim,n_heads, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
                                                    for _ in range(n_heads)] if block_type == "minlstm" else "X")
         if min_gru_blocks == "X":
