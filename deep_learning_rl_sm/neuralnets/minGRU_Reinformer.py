@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from deep_learning_rl_sm.neuralnets.minGRU import BlockV1, BlockV2
+from deep_learning_rl_sm.neuralnets.minGRU import MinGRUCell
 from deep_learning_rl_sm.neuralnets.nets import Actor
 
 
@@ -10,7 +10,6 @@ class minGRU_Reinformer(nn.Module):
             self,
             state_dim,
             act_dim,
-            n_blocks,
             h_dim,
             context_len,
             n_heads,
@@ -18,10 +17,12 @@ class minGRU_Reinformer(nn.Module):
             init_tmp,
             target_entropy,
             discrete,
+            batch_size,
+            device,
             max_timestep=4096,
             expansion_factor=1.5,
-            kernel_size=3,
-            block_type="MinGruBlockV1"):
+            kernel_size=4,
+            block_type="mingru"):
         super().__init__()
         self.num_actions = 7
         self.a_dim = act_dim if not discrete else self.num_actions
@@ -31,11 +32,11 @@ class minGRU_Reinformer(nn.Module):
         # minGRU blocks
         self.num_inputs = 3
         # seq_len_in = self.num_inputs * context_len
-        min_gru_blocks = [  # Consider trying BlockV2
-            BlockV1(self.h_dim, n_heads, drop_p, kernel_size, expansion_factor)
+        min_gru_blocks = [
+            MinGRUCell(self.h_dim,n_layers, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
             for _ in range(n_blocks)] \
-            if block_type == "MinGruBlockV1" else ([BlockV2(self.h_dim, n_heads, drop_p, kernel_size, expansion_factor)
-                                                   for _ in range(n_blocks)] if block_type == "MinGruBlockV2" else "X")
+            if block_type == "mingru" else ([list(self.h_dim,n_layers, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
+                                                   for _ in range(n_layers)] if block_type == "minlstm" else "X")
         if min_gru_blocks == "X":
             raise Exception("invalid block type selected...")
         self.min_gru_stacked = nn.Sequential(*min_gru_blocks)
