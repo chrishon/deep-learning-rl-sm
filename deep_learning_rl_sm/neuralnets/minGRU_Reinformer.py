@@ -35,8 +35,8 @@ class minGRU_Reinformer(nn.Module):
         min_gru_blocks = [
             MinGRUCell(self.h_dim,n_layers, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
             for _ in range(n_blocks)] \
-            if block_type == "mingru" else ([list(self.h_dim,n_layers, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
-                                                   for _ in range(n_layers)] if block_type == "minlstm" else "X")
+            if block_type == "mingru" else ([list(self.h_dim,n_heads, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
+                                                   for _ in range(n_heads)] if block_type == "minlstm" else "X")
         if min_gru_blocks == "X":
             raise Exception("invalid block type selected...")
         self.min_gru_stacked = nn.Sequential(*min_gru_blocks)
