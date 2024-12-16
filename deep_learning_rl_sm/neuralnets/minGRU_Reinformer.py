@@ -16,8 +16,8 @@ class minGRU_Reinformer(nn.Module):
             target_entropy,
             discrete,
             device,
-            n_heads = 3,
-            batch_size = 256,
+            n_blocks=3,
+            batch_size=256,
             max_timestep=4096,
             expansion_factor=1.5,
             kernel_size=4,
@@ -32,29 +32,31 @@ class minGRU_Reinformer(nn.Module):
         self.num_inputs = 3
         # seq_len_in = self.num_inputs * context_len
         min_gru_blocks = [
-            MinGRUCell(self.h_dim,n_heads, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
-            for _ in range(n_heads)] \
-            if block_type == "mingru" else ([list(self.h_dim,n_heads, drop_p,kernel_size,expansion_factor, batch_size = batch_size, device = device)
-                                                   for _ in range(n_heads)] if block_type == "minlstm" else "X")
+            MinGRUCell(self.h_dim, n_blocks, drop_p, kernel_size, expansion_factor, batch_size=batch_size,
+                       device=device)
+            for _ in range(n_blocks)] \
+            if block_type == "mingru" else (
+            [list(self.h_dim, n_blocks, drop_p, kernel_size, expansion_factor, batch_size=batch_size, device=device)
+             for _ in range(n_blocks)] if block_type == "minlstm" else "X")
         if min_gru_blocks == "X":
             raise Exception("invalid block type selected...")
         self.min_gru_stacked = nn.Sequential(*min_gru_blocks)
 
         # projection heads (project to embedding) /same as paper
-        self.embed_ln = nn.LayerNorm(self.h_dim, device = device)
-        self.embed_timestep = nn.Embedding(max_timestep, self.h_dim, padding_idx=0, device = device)
-        self.embed_state = nn.Linear(np.prod(self.s_dim), self.h_dim, device = device)
-        self.embed_rtg = nn.Linear(1, self.h_dim, device = device)
-        self.embed_action = nn.Linear(self.a_dim, self.h_dim, device = device)
+        self.embed_ln = nn.LayerNorm(self.h_dim, device=device)
+        self.embed_timestep = nn.Embedding(max_timestep, self.h_dim, padding_idx=0, device=device)
+        self.embed_state = nn.Linear(np.prod(self.s_dim), self.h_dim, device=device)
+        self.embed_rtg = nn.Linear(1, self.h_dim, device=device)
+        self.embed_action = nn.Linear(self.a_dim, self.h_dim, device=device)
 
         # prediction heads /same as paper
-        self.predict_rtg = nn.Linear(self.h_dim, 1, device = device)
+        self.predict_rtg = nn.Linear(self.h_dim, 1, device=device)
         # stochastic action (output is distribution)
-        self.predict_action = Actor(self.a_dim, self.h_dim, discrete=discrete, device = device)
-        #self.predict_state = nn.Linear(self.h_dim, np.prod(self.s_dim))
+        self.predict_action = Actor(self.a_dim, self.h_dim, discrete=discrete, device=device)
+        # self.predict_state = nn.Linear(self.h_dim, np.prod(self.s_dim))
 
         # For entropy /same as paper
-        self.log_tmp = torch.tensor(np.log(init_tmp), device = device)
+        self.log_tmp = torch.tensor(np.log(init_tmp), device=device)
         self.log_tmp.requires_grad = True
         self.target_entropy = target_entropy
 

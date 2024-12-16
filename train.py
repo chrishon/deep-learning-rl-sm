@@ -37,13 +37,15 @@ parser.add_argument("--wd", type=float, default=1e-4)
 parser.add_argument("--warmup_steps", type=int, default=5000)
 parser.add_argument("--max_train_iters", type=int, default=10)
 parser.add_argument("--num_updates_per_iter", type=int, default=5000)
-parser.add_argument("--device", type=str, default="cuda")
 parser.add_argument("--seed", type=int, default=2024)
 parser.add_argument("--init_temperature", type=float, default=0.1)
 parser.add_argument("--eps", type=float, default=1e-8)
 parser.add_argument("--use_wandb", action='store_true', default=False)
-parser.add_argument("--block_type", choices=["MinGruBlockV1", "MinGruBlockV2"], default="MinGruBlockV1")
+parser.add_argument("--block_type", choices=["mingru", "minlstm"], default="mingru")
 args = parser.parse_args()
+
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if args.use_wandb:
     wandb.init(
@@ -66,9 +68,9 @@ args = vars(args)
 
 # new model
 model = minGRU_Reinformer(state_dim=env.state_dim, act_dim=env.action_dim, n_blocks=args["n_blocks"],
-                          h_dim=args["embed_dim"], context_len=args["context_len"], n_heads=args["n_heads"],
-                          drop_p=args["dropout_p"], init_tmp=args["init_temperature"],discrete=args["env_discrete"],
-                          target_entropy=target_entropy, block_type=args["block_type"])
+                          h_dim=args["embed_dim"], drop_p=args["dropout_p"], init_tmp=args["init_temperature"],
+                          discrete=args["env_discrete"], target_entropy=target_entropy, block_type=args["block_type"],
+                          device=device, batch_size=args["batch_size"])
 optimizer = Lamb(
             model.parameters(),
             lr=args["lr"],

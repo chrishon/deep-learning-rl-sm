@@ -1,5 +1,5 @@
 import warnings
-
+import torch.nn.functional as F
 warnings.filterwarnings("ignore")
 
 
@@ -90,10 +90,15 @@ def generate_data(batch_size=1000, agent=None, adv=None):
     # [1,2,3,4,...] so 0 can be used as a padding index
     time_steps = [time_step_tensor + 1 for time_step_tensor in time_steps]
 
+    # convert actions to a one hot representation
+    for idx, action in enumerate(actions):
+        actions[idx] = F.one_hot(action, num_classes=7)
+
     # TODO is this padding scheme viable?
     # PADDING PARAMETERS
     padded_state = torch.full((22, 42), -100)  # Padding value for states
     padded_mask = torch.full((21, 7), -100)  # Padding for mask
+    padded_action = torch.full((21, 7), 0)
     padded_else = torch.full((21, 1), -100)  # Padding value for other variables
     padded_timestep = torch.full((21, 1), 0)
 
@@ -106,14 +111,14 @@ def generate_data(batch_size=1000, agent=None, adv=None):
 
     # PADDING OTHER VARIABLES (actions, rewards, dones, time_steps, action_masks, returns_to_go)
     for idx in range(len(actions)):
-        pad_act = padded_else.clone()
+        pad_act = padded_action.clone()
         pad_rew = padded_else.clone()
         pad_dones = padded_else.clone()
         pad_time = padded_timestep.clone()
         pad_mask = padded_mask.clone()
         pad_rtg = padded_else.clone()
 
-        pad_act[:actions[idx].shape[0]] = actions[idx].unsqueeze(-1)
+        pad_act[:actions[idx].shape[0]] = actions[idx]
         pad_rew[:rewards[idx].shape[0]] = rewards[idx].unsqueeze(-1)
         pad_dones[:traj_masks[idx].shape[0]] = traj_masks[idx].unsqueeze(-1)
         pad_time[:time_steps[idx].shape[0]] = time_steps[idx].unsqueeze(-1)
@@ -161,11 +166,14 @@ def main():
     agent_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
     adversary_dqn = DQN(BATCH_SIZE, GAMMA, eps_start, eps_end, eps_decay)
     # TODO path might need to be changed for you (i needed an absolute path : Tim)
-    agent_dqn.policy_net.load_state_dict(torch.load("experts/DQN"
-                                                    "/net_configs/agent_dqn.pth", weights_only=True))
+    agent_dqn.policy_net.load_state_dict(
+        torch.load("C:/Users/Tim/Documents/ETHz/DL/deep-learning-rl-sm/experts/DQN/net_configs/agent_dqn.pth",
+                   weights_only=True))
     agent_dqn.policy_net.eval()
-    adversary_dqn.policy_net.load_state_dict(torch.load("experts/DQN"
-                                                        "/net_configs/adversary_dqn.pth", weights_only=True))
+    # "C:/Users/Tim/Documents/ETHz/DL/deep-learning-rl-sm/experts/DQN/net_configs/adversary_dqn.pth"
+    adversary_dqn.policy_net.load_state_dict(
+        torch.load("C:/Users/Tim/Documents/ETHz/DL/deep-learning-rl-sm/experts/DQN/net_configs/adversary_dqn.pth",
+                   weights_only=True))
     adversary_dqn.policy_net.eval()
 
     dp = generate_data(batch_size=1000, agent=agent_dqn, adv=adversary_dqn)
@@ -180,14 +188,17 @@ def main():
     t_s = loaded_data['time_steps']
     a_m = loaded_data['action_masks']
     r_t_g = loaded_data['returns_to_go']
-    print(s[0].reshape((22, 6, 7)))
-    """print(s.shape)  # state trajectories have one more timestep than the rest
+    # print(s[0].reshape((22, 6, 7)))
+    print(a[0][0])
+    print(s.shape)  # state trajectories have one more timestep than the rest
     print(a.shape)
     print(r.shape)
     print(d.shape)
     print(t_s.shape)
     print(a_m.shape)
-    print(r_t_g.shape)"""
+    print(r_t_g.shape)
+    print()
+    print("saved data...")
 
 
 if __name__ == "__main__":

@@ -3,14 +3,14 @@ import numpy as np
 
 
 def Reinformer_eval(
-    model,
-    device,
-    context_len,
-    env,
-    state_mean,
-    state_std,
-    num_eval_ep=10,
-    max_test_ep_len=1000,
+        model,
+        device,
+        context_len,
+        env,
+        state_mean,
+        state_std,
+        num_eval_ep=10,
+        max_test_ep_len=1000,
 ):
     eval_batch_size = 1
     returns = []
@@ -65,10 +65,10 @@ def Reinformer_eval(
                     rtg = rtg_preds[0, t].detach()
                 else:
                     rtg_preds, _, _ = model.forward(
-                        timesteps[:, t - context_len + 1 : t + 1],
-                        states[:, t - context_len + 1 : t + 1],
-                        actions[:, t - context_len + 1 : t + 1],
-                        returns_to_go[:, t - context_len + 1 : t + 1],
+                        timesteps[:, t - context_len + 1: t + 1],
+                        states[:, t - context_len + 1: t + 1],
+                        actions[:, t - context_len + 1: t + 1],
+                        returns_to_go[:, t - context_len + 1: t + 1],
                     )
                     rtg = rtg_preds[0, -1].detach()
                 # add rtg in placeholder
@@ -84,10 +84,10 @@ def Reinformer_eval(
                     act = act_dist_preds.mean.reshape(eval_batch_size, -1, act_dim)[0, t].detach()
                 else:
                     _, act_dist_preds, _ = model.forward(
-                        timesteps[:, t - context_len + 1 : t + 1],
-                        states[:, t - context_len + 1 : t + 1],
-                        actions[:, t - context_len + 1 : t + 1],
-                        returns_to_go[:, t - context_len + 1 : t + 1],
+                        timesteps[:, t - context_len + 1: t + 1],
+                        states[:, t - context_len + 1: t + 1],
+                        actions[:, t - context_len + 1: t + 1],
+                        returns_to_go[:, t - context_len + 1: t + 1],
                     )
                     act = act_dist_preds.mean.reshape(eval_batch_size, -1, act_dim)[0, -1].detach()
                 # env step
@@ -104,5 +104,5 @@ def Reinformer_eval(
                     returns.append(episode_return)
                     lengths.append(episode_length)
                     break
-    
+
     return np.array(returns).mean(), np.array(returns).std(), np.array(lengths).mean(), np.array(lengths).mean()

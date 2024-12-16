@@ -1,5 +1,4 @@
 import random
-import gymnasium as gym
 import numpy as np
 import torch
 import wandb
@@ -10,8 +9,8 @@ from torch.utils.data import DataLoader
 
 
 class Trainer:
-    def __init__(self, model : nn.Module, optimizer: Optimizer, scheduler, batch_size: int = 32,
-                 learning_rate: float = 1e-3, num_epochs: int = 10, device=None,dataset=None,parsed_args=None):
+    def __init__(self, model: nn.Module, optimizer: Optimizer, scheduler, batch_size: int = 32,
+                 learning_rate: float = 1e-3, num_epochs: int = 10, device=None, dataset=None, parsed_args=None):
         self.tau = parsed_args["tau"]
         self.grad_norm = parsed_args["grad_norm"]
         self.model = model.to(device)
@@ -20,10 +19,12 @@ class Trainer:
         self.learning_rate = learning_rate
         self.num_epochs = num_epochs
         self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Define DataLoader
         if dataset is not None:
-            self.data_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True,pin_memory=True,drop_last=True)
+            self.data_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, pin_memory=True,
+                                          drop_last=True)
             self.data_iter = iter(self.data_loader)
 
         # Define optimizer and loss function
@@ -53,6 +54,7 @@ class Trainer:
         states = states.to(self.device)  # B x T x state_dim
         actions = actions.float()
         actions = actions.to(self.device)  # B x T x act_dim
+        print("actions shape: "+str(actions.shape))
         returns_to_go = returns_to_go.to(self.device).unsqueeze(
             dim=-1
         )  # B x T x 1
@@ -69,7 +71,7 @@ class Trainer:
             returns_to_go_preds,
             actions_dist_preds,
             _,
-        ) = self.model.forward(
+        ) = self.model(
             timesteps=timesteps,
             states=states,
             actions=actions,
@@ -94,10 +96,6 @@ class Trainer:
             ) * u ** 2
         )
 
-        # TODO this section will likely throw errors when dealing with non discrete envs like in D4RL.
-        #  Taking a look at previous implementation or original Reinformer code will help you
-        #  to make adjustments to D4RL Rasmus!!!
-        #  (we have a categorical dist output from the actor net, chosen by setting arg in parseargs to discrete)
         # action_loss ------------------------------------------------
         # cannot calculate logprobs of out of dist actions need to fill with viable value for padding and then mask to 0
         actions_target = torch.clone(actions)
@@ -106,11 +104,12 @@ class Trainer:
         actions_target_4logprob[~mask] = 0
         actions_target_4logprob = actions_target_4logprob.squeeze()
 
+        actions_target_4logprob = torch.argmax(actions_target_4logprob, dim=-1)
+
         log_likelihood = (actions_dist_preds.log_prob(
             actions_target_4logprob
         )).unsqueeze(-1) * mask
-        # TODO why is batch dim sometimes 232
-        print(log_likelihood.shape)
+        print(log_likelihood.shape)  # TODO fix batch size discrepancy problem then remove this marker
         log_likelihood = log_likelihood.sum(axis=2).view(-1)[
             (traj_mask.view(-1) == 0) | (traj_mask.view(-1) == 1)
             ].mean()
@@ -152,33 +151,16 @@ class Trainer:
         # parsed_args["batch_size"] = 16 if dataset == "complete" else 256
         if env in ["kitchen", "maze2d", "antmaze"]:
             parsed_args["num_eval_ep"] = 100
-        # TODO set data path
-        # dataset_path = os.path.join(variant["dataset_dir"], f"{d4rl_env}.pkl")
-        device = torch.device(parsed_args["device"])
 
+        # TODO: fix dataloader so batch size is always the same (128) and not 104 sometimes
         data_loader = DataLoader(
             dataset=dataset,
             batch_size=parsed_args["batch_size"],
             shuffle=True,
 
         )
-        # TODO iterate data ret batch size 128 or [104 (rarely)] make so only 128!(shouldn't massively effect training)
         iterate_data = iter(data_loader)
-        # data_test = next(iterate_data)
-        """for i, tens in enumerate(data_test):
-            print("data batch shape:")
-            print(next(iterate_data)[i].shape)
-        print()"""
-        # TODO implement get_state_stats for our envs???
-        # state_mean, state_std = dataset.get_state_stats()
-
-        # TODO initialize env random seed
-
-        # state_dim = env.observation_space.shape[0]
-        # act_dim = env.action_space.shape[0]
-
-        model_type = parsed_args["model_type"]
-
+        # model_type = parsed_args["model_type"]
         max_train_iters = parsed_args["max_train_iters"]
         num_updates_per_iter = parsed_args["num_updates_per_iter"]
         score_list_normalized = []
@@ -187,7 +169,7 @@ class Trainer:
         for _ in range(1, max_train_iters + 1):
             for epoch in range(num_updates_per_iter):
                 print(epoch)
-                if epoch%10 == 0:
+                if epoch % 10 == 0 and epoch != 0:
                     self.evaluate_online()
                 try:
                     print("Trying to get batch")
@@ -299,7 +281,7 @@ class Trainer:
                     # Apply mask to the probabilities
                     print("action_mask", action_mask)
                     print("actions_dist_preds.probs[0]", actions_dist_preds.probs[0])
-                    original_probs = actions_dist_preds.probs[0][timestep-1]
+                    original_probs = actions_dist_preds.probs[0][timestep - 1]
                     masked_probs = original_probs * action_mask  # Mask out invalid actions
                     print("masked_probs ", masked_probs)
                     masked_probs = masked_probs / masked_probs.sum()  # Renormalize
@@ -309,11 +291,11 @@ class Trainer:
                     masked_action_dist = torch.distributions.Categorical(probs=masked_probs)
                     act = masked_action_dist.sample().item()
                     print(f"states: {states.shape}")
-             
-                    state, reward, done, _, _ = self.env.step(act) #TODO
+
+                    state, reward, done, _, _ = self.env.step(act)  # TODO
                     print(f"state: {state.shape}")
-                    actions[timestep-1,:] = act
-                    states[0,timestep-1,:] = torch.flatten(torch.tensor(state))
+                    actions[timestep - 1, :] = act
+                    states[0, timestep - 1, :] = torch.flatten(torch.tensor(state))
                     print("rtg shaoe1:, ", returns_to_go.shape)
                     print("rtg shaoe:, ", returns_to_go_preds.squeeze(0).shape)
                     returns_to_go = returns_to_go_preds.squeeze(0)
@@ -348,7 +330,6 @@ class Trainer:
         avg_loss = total_loss / len(data_loader)
         print(f"Evaluation Loss: {avg_loss:.4f}")
         return avg_loss
-    
 
     def train_iteration_benchmark(self, num_steps, iter_num=0, print_logs=False):
 
@@ -360,13 +341,12 @@ class Trainer:
         # training -----------------------------------------------
         self.model.train()
         for i in range(num_steps):
-            if i%50 == 0:
+            if i % 50 == 0:
                 print(f"Iteration {i}, time: {time.time() - train_start}")
             train_loss = self.train_step_benchmark()
             train_losses.append(train_loss)
             if self.scheduler is not None:
                 self.scheduler.step()
-
 
         eval_start = time.time()
 
@@ -378,19 +358,16 @@ class Trainer:
                 logs[f'evaluation/{k}'] = v
 
         logs['time/evaluation'] = time.time() - eval_start"""
-        
-        
+
         # timing -----------------------------------------------
         logs['time/training'] = time.time() - train_start
         logs['time/total'] = time.time() - self.time_start
         logs['training/train_loss_mean'] = np.mean(train_losses)
         logs['training/train_loss_std'] = np.std(train_losses)
 
-        
         # diagnostics -----------------------------------------------
         """for k in self.diagnostics:
             logs[k] = self.diagnostics[k]"""
-
 
         # prints ---------------------------------------------------
         if print_logs:
@@ -400,106 +377,104 @@ class Trainer:
                 print(f'{k}: {v}')
 
         return logs
-    
+
     def get_next(self):
         try:
-                (
-                    timesteps,
-                    states,
-                    actions,
-                    returns_to_go,
-                    traj_mask,
-                ) = next(self.data_iter)
+            (
+                timesteps,
+                states,
+                actions,
+                returns_to_go,
+                traj_mask,
+            ) = next(self.data_iter)
         except StopIteration:
-                del self.data_iter
-                self.data_iter = iter(self.data_loader)
-                (
-                    timesteps,
-                    states,
-                    actions,
-                    returns_to_go,
-                    traj_mask,
-                ) = next(self.data_iter)
+            del self.data_iter
+            self.data_iter = iter(self.data_loader)
+            (
+                timesteps,
+                states,
+                actions,
+                returns_to_go,
+                traj_mask,
+            ) = next(self.data_iter)
         return (
-                    timesteps,
-                    states,
-                    actions,
-                    returns_to_go,
-                    traj_mask,
-                )
+            timesteps,
+            states,
+            actions,
+            returns_to_go,
+            traj_mask,
+        )
 
     def train_step_benchmark(self):
-            timesteps, states, actions, rtg, traj_mask = self.get_next()
-            timesteps = timesteps.to(self.device)      # B x T
-            states = states.to(self.device)            # B x T x state_dim
-            actions = actions.to(self.device)          # B x T x act_dim
-            rtg = rtg.to(self.device).unsqueeze(
-                dim=-1
-            )                                       # B x T x 1
-            traj_mask = traj_mask.to(self.device)      # B x T
-            # model forward ----------------------------------------------
-            (
-                returns_to_go_preds,
-                actions_dist_preds,
-                _,
-            ) = self.model.forward(
-                timesteps=timesteps,
-                states=states,
-                actions=actions,
-                returns_to_go=rtg,
-            )
-            returns_to_go_target = torch.clone(rtg).view(
-                -1, 1
-            )[
-                traj_mask.view(-1,) > 0
+        timesteps, states, actions, rtg, traj_mask = self.get_next()
+        timesteps = timesteps.to(self.device)  # B x T
+        states = states.to(self.device)  # B x T x state_dim
+        actions = actions.to(self.device)  # B x T x act_dim
+        rtg = rtg.to(self.device).unsqueeze(
+            dim=-1
+        )  # B x T x 1
+        traj_mask = traj_mask.to(self.device)  # B x T
+        # model forward ----------------------------------------------
+        (
+            returns_to_go_preds,
+            actions_dist_preds,
+            _,
+        ) = self.model.forward(
+            timesteps=timesteps,
+            states=states,
+            actions=actions,
+            returns_to_go=rtg,
+        )
+        returns_to_go_target = torch.clone(rtg).view(
+            -1, 1
+        )[
+            traj_mask.view(-1, ) > 0
             ]
-            returns_to_go_preds = returns_to_go_preds.view(-1, 1)[
-                traj_mask.view(-1,) > 0
+        returns_to_go_preds = returns_to_go_preds.view(-1, 1)[
+            traj_mask.view(-1, ) > 0
             ]
 
-            # returns_to_go_loss -----------------------------------------
-            norm = returns_to_go_target.abs().mean()
-            u = (returns_to_go_target - returns_to_go_preds) / norm
-            returns_to_go_loss = torch.mean(
-                torch.abs(
-                    self.tau - (u < 0).float()
-                ) * u ** 2
-            )
-            # action_loss ------------------------------------------------
-            actions_target = torch.clone(actions)
-            log_likelihood = actions_dist_preds.log_prob(
-                actions_target
-                ).sum(axis=2)[
-                traj_mask > 0
+        # returns_to_go_loss -----------------------------------------
+        norm = returns_to_go_target.abs().mean()
+        u = (returns_to_go_target - returns_to_go_preds) / norm
+        returns_to_go_loss = torch.mean(
+            torch.abs(
+                self.tau - (u < 0).float()
+            ) * u ** 2
+        )
+        # action_loss ------------------------------------------------
+        actions_target = torch.clone(actions)
+        log_likelihood = actions_dist_preds.log_prob(
+            actions_target
+        ).sum(axis=2)[
+            traj_mask > 0
             ].mean()
-            entropy = actions_dist_preds.entropy().sum(axis=2).mean()
-            action_loss = -(log_likelihood + self.model.temp().detach() * entropy)
+        entropy = actions_dist_preds.entropy().sum(axis=2).mean()
+        action_loss = -(log_likelihood + self.model.temp().detach() * entropy)
 
-            loss = returns_to_go_loss + action_loss
+        loss = returns_to_go_loss + action_loss
 
-            # optimizer -----------------------------------------------
-            self.optimizer.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(),
-                self.grad_norm
-            )
-            self.optimizer.step()
-            
-            # scheduler -----------------------------------------------
-            self.log_temperature_optimizer.zero_grad()
-            temperature_loss = (
-                    self.model.temp() * (entropy - self.model.target_entropy).detach()
-            )
-            temperature_loss.backward()
-            self.log_temperature_optimizer.step()
+        # optimizer -----------------------------------------------
+        self.optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(
+            self.model.parameters(),
+            self.grad_norm
+        )
+        self.optimizer.step()
 
-            self.scheduler.step()
-            
-            
-            # diagnostics -----------------------------------------------
-            """with torch.no_grad():
-                self.diagnostics['training/action_error'] = torch.mean((action_preds-action_target)**2).detach().cpu().item()"""
+        # scheduler -----------------------------------------------
+        self.log_temperature_optimizer.zero_grad()
+        temperature_loss = (
+                self.model.temp() * (entropy - self.model.target_entropy).detach()
+        )
+        temperature_loss.backward()
+        self.log_temperature_optimizer.step()
 
-            return loss.detach().cpu().item()
+        self.scheduler.step()
 
+        # diagnostics -----------------------------------------------
+        """with torch.no_grad():
+            self.diagnostics['training/action_error'] = torch.mean((action_preds-action_target)**2).detach().cpu().item()"""
+
+        return loss.detach().cpu().item()
