@@ -137,7 +137,7 @@ class Trainer:
 
         self.scheduler.step()
 
-        return loss.detach().cpu().item()
+        return loss.detach().cpu().item(), returns_to_go_loss.detach().cpu().item(), action_loss.detach().cpu().item()
 
     def train(self, parsed_args):
         self.model.train()
@@ -211,7 +211,7 @@ class Trainer:
 
                     ) = next(iterate_data)
 
-                loss = self.train_step(
+                loss, returns_to_go_loss, action_loss = self.train_step(
                     timesteps=timesteps.squeeze(2),
                     states=states,
                     actions=actions,
@@ -223,12 +223,22 @@ class Trainer:
                     wandb.log(
                         data={
                             "training/loss": loss,
-                        }
+                            "training/rtg_loss": returns_to_go_loss,
+                            "training/action_loss": action_loss
+                        }, 
+                        step=num_updates
                     )
 
                 if num_updates % 50 == 0 and num_updates != 0:
                     win_loss_ratio_test = self.evaluate_online(env=env)
                     print("win loss ratio: " + str(win_loss_ratio_test))
+                    if parsed_args["use_wandb"]:
+                        wandb.log(
+                            data={
+                                "evaluation/win_loss_ratio": win_loss_ratio_test
+                            },
+                            step=num_updates
+                        )
                 num_updates += 1
 
             # TODO win_loss_ratio_test instead of normalized score or both?
@@ -240,7 +250,8 @@ class Trainer:
                 wandb.log(
                     data={
                         "evaluation/score": normalized_score
-                    }
+                    }, 
+                    step=num_updates
                 )
 
         if parsed_args["use_wandb"]:
@@ -248,8 +259,10 @@ class Trainer:
                 data={
                     "evaluation/max_score": max(score_list_normalized),
                     "evaluation/last_score": score_list_normalized[-1]
-                }
+                }, 
+                step=num_updates
             )
+            wandb.finish()
         print(score_list_normalized)
         print("finished training!")
 

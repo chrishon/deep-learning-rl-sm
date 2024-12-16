@@ -46,7 +46,6 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=2024)
     parser.add_argument("--init_temperature", type=float, default=0.1)
     parser.add_argument("--eps", type=float, default=1e-8)
-    # use_wandb = False
     parser.add_argument("--use_wandb", action='store_true', default=False)
     return parser.parse_args()
 
@@ -60,9 +59,11 @@ if __name__ == "__main__":
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
     if args.use_wandb:
+        wandb.login()
         wandb.init(
             name=args.env + "-" + args.dataset,
             project="Reinformer",
+            force=True,
             config=vars(args)
         )
     max_ep_len = 1000 #Same for all 3 envs (Hopper, Walker, HalfCheetah)
@@ -165,6 +166,3 @@ if __name__ == "__main__":
     
     for it in range(args["max_iters"]):
         outputs = trainer.train_iteration_benchmark(num_steps=args['num_steps_per_iter'], iter_num=it+1, print_logs=True)
-        #Eval
-        if args["use_wandb"]:
-            wandb.log(outputs)
