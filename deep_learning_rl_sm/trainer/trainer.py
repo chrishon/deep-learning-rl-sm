@@ -349,6 +349,7 @@ class Trainer:
         print(f"Evaluation Loss: {avg_loss:.4f}")
         return avg_loss
     
+
     def train_iteration_benchmark(self, num_steps, iter_num=0, print_logs=False):
 
         train_losses = []
@@ -358,13 +359,14 @@ class Trainer:
 
         # training -----------------------------------------------
         self.model.train()
-        for _ in range(num_steps):
+        for i in range(num_steps):
+            if i%50 == 0:
+                print(f"Iteration {i}, time: {time.time() - train_start}")
             train_loss = self.train_step_benchmark()
             train_losses.append(train_loss)
             if self.scheduler is not None:
                 self.scheduler.step()
 
-        logs['time/training'] = time.time() - train_start
 
         eval_start = time.time()
 
@@ -375,27 +377,66 @@ class Trainer:
             for k, v in outputs.items():
                 logs[f'evaluation/{k}'] = v
 
-        logs['time/total'] = time.time() - self.start_time
-        logs['time/evaluation'] = time.time() - eval_start
+        logs['time/evaluation'] = time.time() - eval_start"""
+        
+        
+        # timing -----------------------------------------------
+        logs['time/training'] = time.time() - train_start
+        logs['time/total'] = time.time() - self.time_start
         logs['training/train_loss_mean'] = np.mean(train_losses)
-        logs['training/train_loss_std'] = np.std(train_losses)"""
+        logs['training/train_loss_std'] = np.std(train_losses)
 
         
         # diagnostics -----------------------------------------------
         """for k in self.diagnostics:
             logs[k] = self.diagnostics[k]"""
 
+
+        # prints ---------------------------------------------------
         if print_logs:
             print('=' * 80)
-            print(f'Iteration {iter_num}')
+            print(f'Epoch {iter_num}')
             for k, v in logs.items():
                 print(f'{k}: {v}')
 
         return logs
+    
+    def get_next(self):
+        try:
+                (
+                    timesteps,
+                    states,
+                    actions,
+                    returns_to_go,
+                    traj_mask,
+                ) = next(self.data_iter)
+        except StopIteration:
+                del self.data_iter
+                self.data_iter = iter(self.data_loader)
+                (
+                    timesteps,
+                    states,
+                    actions,
+                    returns_to_go,
+                    traj_mask,
+                ) = next(self.data_iter)
+        return (
+                    timesteps,
+                    states,
+                    actions,
+                    returns_to_go,
+                    traj_mask,
+                )
 
     def train_step_benchmark(self):
-            states, actions, rewards, dones, rtg, timesteps, traj_mask = self.get_batch(self.batch_size)
-            self.model = self.model.to(self.device)
+            timesteps, states, actions, rtg, traj_mask = self.get_next()
+            timesteps = timesteps.to(self.device)      # B x T
+            states = states.to(self.device)            # B x T x state_dim
+            actions = actions.to(self.device)          # B x T x act_dim
+            rtg = rtg.to(self.device).unsqueeze(
+                dim=-1
+            )                                       # B x T x 1
+            traj_mask = traj_mask.to(self.device)      # B x T
             # model forward ----------------------------------------------
             (
                 returns_to_go_preds,
@@ -407,7 +448,6 @@ class Trainer:
                 actions=actions,
                 returns_to_go=rtg,
             )
-
             returns_to_go_target = torch.clone(rtg).view(
                 -1, 1
             )[
@@ -462,3 +502,4 @@ class Trainer:
                 self.diagnostics['training/action_error'] = torch.mean((action_preds-action_target)**2).detach().cpu().item()"""
 
             return loss.detach().cpu().item()
+
