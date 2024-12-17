@@ -176,7 +176,8 @@ def main():
                    weights_only=True))
     adversary_dqn.policy_net.eval()
 
-    dp = generate_data(batch_size=1000, agent=agent_dqn, adv=adversary_dqn)
+    # have dataset with size that is a multiple of batch size (128) used
+    dp = generate_data(batch_size=1280, agent=agent_dqn, adv=adversary_dqn)
 
     loaded_data = torch.load(dp)
 
