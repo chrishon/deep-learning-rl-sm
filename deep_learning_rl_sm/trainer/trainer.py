@@ -157,7 +157,7 @@ class Trainer:
             dataset=dataset,
             batch_size=parsed_args["batch_size"],
             shuffle=True,
-
+            drop_last=True
         )
         iterate_data = iter(data_loader)
         # model_type = parsed_args["model_type"]
