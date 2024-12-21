@@ -45,6 +45,7 @@ class minGRU(Module):
         self.dim = dim
         self.exp_dim = int(dim * expansion_factor)
         self.log_h = log_g(torch.zeros((batch_size, 1, self.exp_dim), device=device))
+        self.log_h_inference = log_g(torch.zeros((1, 1, self.exp_dim), device=device))
         self.f = Linear(dim, 2 * self.exp_dim, bias=False, device=device)
         self.down_projection = Linear(self.exp_dim, dim, bias=False,
                                       device=device) if expansion_factor != 1 else nn.Identity()
@@ -77,7 +78,9 @@ class minGRU(Module):
         log_z = -F.softplus(-k)
         log_coeffs = -F.softplus(k)
         log_tilde_h = log_g(h_x)
-        return self.down_projection(parallel_scan_log(log_coeffs, torch.cat([self.log_h, log_tilde_h + log_z], dim=1)))
+        catted = torch.cat([self.log_h, log_tilde_h + log_z], dim=1) if x.shape[0] > 1 \
+            else torch.cat([self.log_h_inference, log_tilde_h + log_z], dim=1)
+        return self.down_projection(parallel_scan_log(log_coeffs, catted))
 
 
 class CausalDepthWiseConv1d(Module):

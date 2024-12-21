@@ -10,7 +10,6 @@ from deep_learning_rl_sm.neuralnets.lamb import Lamb
 from deep_learning_rl_sm.environments import connect_four
 from data.custom_dataset import CustomDataset
 
-# TODO generate our datasets separately so we only have to load them here! input format!
 env = connect_four.ConnectFour()
 # maybe push generate sequences into the trainer class somewhere
 
@@ -53,9 +52,7 @@ if args.use_wandb:
         project="Reinformer",
         config=vars(args)
     )
-# TODO have discrete set based on environment choice instead of manual
 discrete = True
-# TODO explore different target entropies
 # entropy to encourage exploration in RL typically -action_dim for continuous actions and -log(action_dim) when discrete
 target_entropy = -np.log(np.prod(env.action_dim)) if discrete else -np.prod(env.action_dim)
 args = vars(args)

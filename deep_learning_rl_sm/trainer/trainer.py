@@ -54,7 +54,6 @@ class Trainer:
         states = states.to(self.device)  # B x T x state_dim
         actions = actions.float()
         actions = actions.to(self.device)  # B x T x act_dim
-        print("actions shape: "+str(actions.shape))
         returns_to_go = returns_to_go.to(self.device).unsqueeze(
             dim=-1
         )  # B x T x 1
@@ -109,7 +108,7 @@ class Trainer:
         log_likelihood = (actions_dist_preds.log_prob(
             actions_target_4logprob
         )).unsqueeze(-1) * mask
-        print(log_likelihood.shape)  # TODO fix batch size discrepancy problem then remove this marker
+        # print(log_likelihood.shape)
         log_likelihood = log_likelihood.sum(axis=2).view(-1)[
             (traj_mask.view(-1) == 0) | (traj_mask.view(-1) == 1)
             ].mean()
@@ -152,7 +151,6 @@ class Trainer:
         if env in ["kitchen", "maze2d", "antmaze"]:
             parsed_args["num_eval_ep"] = 100
 
-        # TODO: fix dataloader so batch size is always the same (128) and not 104 sometimes
         data_loader = DataLoader(
             dataset=dataset,
             batch_size=parsed_args["batch_size"],
@@ -168,7 +166,8 @@ class Trainer:
         num_updates = 0
         for _ in range(1, max_train_iters + 1):
             for epoch in range(num_updates_per_iter):
-                print(epoch)
+                print()
+                print("iteration: " + str(epoch))
                 if epoch % 10 == 0 and epoch != 0:
                     self.evaluate_online()
                 try:
@@ -216,7 +215,6 @@ class Trainer:
                     print("win loss ratio: " + str(win_loss_ratio_test))
                 num_updates += 1
 
-            # TODO win_loss_ratio_test instead of normalized score or both?
             normalized_score = self.evaluate(
                 dataset=None
             )
@@ -244,22 +242,22 @@ class Trainer:
             # states vector is 1 timestep larger because of init state
             # flatten board state
             s0 = torch.flatten(torch.tensor(self.env.reset()[0]))
-            print("s0 shape: " + str(s0.shape[0]))
+            # print("s0 shape: " + str(s0.shape[0]))
             states = torch.zeros((1, 21, s0.shape[0]))
             states[0, 0] = s0  # (B=1, T=1, State)
             timesteps = torch.tensor([i for i in range(21)]) + 1  # remember 0 is used for padding
             timesteps = timesteps.unsqueeze(0)
-            actions = torch.full((21, 1), 0)
+            actions = torch.full((21, 7), 0)
             returns_to_go = torch.full((21, 1), -100)
 
             states = states.float()
             timesteps = timesteps
             actions = actions.float()
             returns_to_go = returns_to_go.float()
-            print(f"Timestep online Shape: {timesteps.shape}")
+            """print(f"Timestep online Shape: {timesteps.shape}")
             print(f"states online Shape: {states.shape}")
             print(f"actions online Shape: {actions.shape}")
-            print(f"returns_to_go online Shape: {returns_to_go.shape}")
+            print(f"returns_to_go online Shape: {returns_to_go.shape}")"""
             while True:
 
                 (
@@ -273,31 +271,31 @@ class Trainer:
                     returns_to_go=returns_to_go,
                 )
                 for timestep in timesteps[0]:
-                    print(f"Timestep: {timestep}")
+                    # print(f"Timestep: {timestep}")
 
                     action_mask = self.env.action_mask  # Should return a tensor of 1s/0s
                     action_mask = torch.tensor(action_mask, dtype=torch.float32).to(self.device)
 
                     # Apply mask to the probabilities
-                    print("action_mask", action_mask)
-                    print("actions_dist_preds.probs[0]", actions_dist_preds.probs[0])
+                    """print("action_mask", action_mask)
+                    print("actions_dist_preds.probs[0]", actions_dist_preds.probs[0])"""
                     original_probs = actions_dist_preds.probs[0][timestep - 1]
                     masked_probs = original_probs * action_mask  # Mask out invalid actions
-                    print("masked_probs ", masked_probs)
+                    # print("masked_probs ", masked_probs)
                     masked_probs = masked_probs / masked_probs.sum()  # Renormalize
-                    print("masked_probs ", masked_probs)
+                    # print("masked_probs ", masked_probs)
 
                     # Create a new Categorical distribution with masked probabilities
                     masked_action_dist = torch.distributions.Categorical(probs=masked_probs)
                     act = masked_action_dist.sample().item()
-                    print(f"states: {states.shape}")
+                    # print(f"states: {states.shape}")
 
                     state, reward, done, _, _ = self.env.step(act)  # TODO
-                    print(f"state: {state.shape}")
+                    # print(f"state: {state.shape}")
                     actions[timestep - 1, :] = act
                     states[0, timestep - 1, :] = torch.flatten(torch.tensor(state))
-                    print("rtg shaoe1:, ", returns_to_go.shape)
-                    print("rtg shaoe:, ", returns_to_go_preds.squeeze(0).shape)
+                    """print("rtg shaoe1:, ", returns_to_go.shape)
+                    print("rtg shaoe:, ", returns_to_go_preds.squeeze(0).shape)"""
                     returns_to_go = returns_to_go_preds.squeeze(0)
                     ratio += reward if reward == 1 else 0
                     if done:
