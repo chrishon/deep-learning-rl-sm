@@ -137,8 +137,13 @@ class Trainer:
 
         self.scheduler.step()
 
-        return loss.detach().cpu().item(), returns_to_go_loss.detach().cpu().item(), action_loss.detach().cpu().item()
-
+        return loss.detach().cpu().item(), \
+                returns_to_go_loss.detach().cpu().item(), \
+                action_loss.detach().cpu().item(), \
+                u.detach().cpu().item(), \
+                log_likelihood.detach().cpu().item(), \
+                temperature_loss.detach().cpu().item()
+    
     def train(self, parsed_args):
         self.model.train()
         seed = parsed_args["seed"]
@@ -211,7 +216,7 @@ class Trainer:
 
                     ) = next(iterate_data)
 
-                loss, returns_to_go_loss, action_loss = self.train_step(
+                loss, returns_to_go_loss, action_loss, u, log_likelihood, temperature_loss = self.train_step(
                     timesteps=timesteps.squeeze(2),
                     states=states,
                     actions=actions,
@@ -224,7 +229,10 @@ class Trainer:
                         data={
                             "training/loss": loss,
                             "training/rtg_loss": returns_to_go_loss,
-                            "training/action_loss": action_loss
+                            "training/action_loss": action_loss,
+                            "training/u": u,
+                            "training/log_likelihood": log_likelihood,
+                            "training/temperature_loss": temperature_loss
                         }, 
                         step=num_updates
                     )
