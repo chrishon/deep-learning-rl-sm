@@ -140,7 +140,7 @@ class Trainer:
         return loss.detach().cpu().item(), \
                 returns_to_go_loss.detach().cpu().item(), \
                 action_loss.detach().cpu().item(), \
-                u.detach().cpu().item(), \
+                torch.mean(u.detach().cpu().item()), \
                 log_likelihood.detach().cpu().item(), \
                 temperature_loss.detach().cpu().item()
     
