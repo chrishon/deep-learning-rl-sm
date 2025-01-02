@@ -177,8 +177,8 @@ def main():
     adversary_dqn.policy_net.eval()
 
     # have dataset with size that is a multiple of batch size (128) used
-    dp = generate_data(batch_size=1280, agent=agent_dqn, adv=adversary_dqn)
-
+    dp = generate_data(batch_size=10240, agent=agent_dqn, adv=None)
+    print(dp)
     loaded_data = torch.load(dp)
 
     # Access individual items from the loaded dictionary
@@ -190,7 +190,8 @@ def main():
     a_m = loaded_data['action_masks']
     r_t_g = loaded_data['returns_to_go']
     # print(s[0].reshape((22, 6, 7)))
-    print(a[0][0])
+    for i in range(20):
+        print(a[i][2])
     print(s.shape)  # state trajectories have one more timestep than the rest
     print(a.shape)
     print(r.shape)

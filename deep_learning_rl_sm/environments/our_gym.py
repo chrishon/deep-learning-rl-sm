@@ -45,8 +45,11 @@ class OurEnv(gym.Env):
                     action = actor.get_action_from_net(state=convert_state(np.copy(s)), action_mask=self.action_mask)
                     next_state, reward, done, _, _ = self.step_2P(action, 1)
                     if not done:
-                        action_adv = adv_actor.get_action_from_net(state=convert_state(np.copy(next_state)),
-                                                                   action_mask=self.action_mask)
+                        if adv_actor is not None:
+                            action_adv = adv_actor.get_action_from_net(state=convert_state(np.copy(next_state)),
+                                                                       action_mask=self.action_mask)
+                        else:
+                            action_adv = act_space.sample(self.action_mask)
                         next_state, _, done, _, _ = self.step_2P(action_adv, 2)
                 else:
                     action = act_space.sample(self.action_mask)
